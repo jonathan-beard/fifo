@@ -12,8 +12,12 @@ CXXFILES = $(addsuffix .cpp, $(CXXOBJS) )
 
 OBJS = $(addsuffix .o, $(COBJS) ) $(addsuffix .o, $(CXXOBJS) )
 
+ifneq ($(shell uname -s), Darwin)
+RT = -lrt
+endif
+
 INCS = 
-LIBS = -lpthread -lrt
+LIBS = -lpthread $(RT)
 
 compile: $(CXXFILES) $(CFILES)
 	$(MAKE) $(OBJS)
