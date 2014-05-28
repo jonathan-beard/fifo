@@ -22,12 +22,20 @@
 
 #include <array>
 #include <cstdlib>
+#include <cassert>
 #include <thread>
 #include <cstring>
 #include "pointer.hpp"
 #include "ringbuffertypes.hpp"
 #include "bufferdata.tcc"
 
+/**
+ * Note: there is a NICE define that can be uncommented
+ * below if you want sched_yield called when waiting for
+ * writes or blocking for space, otherwise blocking will
+ * actively spin while waiting.
+ */
+//#define NICE 1
 
 template < class T, 
            RingBufferType type,
@@ -53,15 +61,22 @@ public:
     */
    size_t   size()
    {
-      const size_t wpt( Pointer::val( data->write_pt ) ), 
+      const auto   wrap_write( Pointer::wrapIndicator( data->write_pt  ) ),
+                   wrap_read(  Pointer::wrapIndicator( data->read_pt   ) );
+      const auto   wpt( Pointer::val( data->write_pt ) ), 
                    rpt( Pointer::val( data->read_pt  ) );
       if( wpt == rpt )
       {
-         const size_t wrap_write( Pointer::wrapIndicator( data->write_pt  ) ),
-                      wrap_read(  Pointer::wrapIndicator( data->read_pt   ) );
-
          if( wrap_read < wrap_write )
          {
+            return( data->max_cap );
+         }
+         else if( wrap_read > wrap_write )
+         {
+            /**
+             * TODO, this condition is momentary, however there
+             * is a better way to fix this with atomic operations
+             */
             return( data->max_cap );
          }
          else
@@ -110,7 +125,9 @@ public:
    {
       while( spaceAvail() == 0 )
       {
+#ifdef NICE      
          std::this_thread::yield();
+#endif         
       }
       const size_t write_index( Pointer::val( data->write_pt ) );
       data->store[ write_index ] = item;
@@ -126,9 +143,11 @@ public:
     */
    T blockingRead()
    {
-      while( size() < 1 )
+      while( size() == 0 )
       {
+#ifdef NICE      
          std::this_thread::yield();
+#endif        
       }
       const size_t read_index( Pointer::val( data->read_pt ) );
       T output = data->store[ read_index ];
@@ -148,7 +167,9 @@ public:
    {
       while( size() < 1 )
       {
+#ifdef NICE      
          std::this_thread::yield();
+#endif         
       }
       const size_t read_index( Pointer::val( data->read_pt ) );
       T &output( data->store[ read_index ] );

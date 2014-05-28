@@ -18,7 +18,7 @@
  * limitations under the License.
  */
 #include "pointer.hpp"
-
+#include <thread>
 
 Pointer::Pointer(const size_t cap ) : a( 0 ),
                                       b( 0 ),

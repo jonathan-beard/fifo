@@ -6,10 +6,10 @@
 #include "ringbuffer.tcc"
 
 struct Data{
-   Data( int64_t send ) : send_count(  send )
+   Data( size_t send ) : send_count(  send )
    {}
 
-   int64_t                 send_count;
+   size_t                 send_count;
 } data( 1e7 ) ;
 
 

@@ -82,8 +82,8 @@ private:
     * TODO, get these set correctly if we do eventually
     * wrap an unsigned 64 int.
     */
-   volatile std::uint64_t     wrap_a;
-   volatile std::uint64_t     wrap_b;
+   volatile std::uint64_t    wrap_a;
+   volatile std::uint64_t    wrap_b;
    const    size_t           max_cap;
 };
 #endif /* END _POINTER_HPP_ */
