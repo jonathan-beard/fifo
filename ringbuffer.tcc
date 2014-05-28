@@ -27,10 +27,23 @@
 #include "ringbufferbase.tcc"
 #include "shm.hpp"
 #include "ringbuffertypes.hpp"
+#include "SystemClock.tcc"
 
+extern SystemClock< System > *system_clock;
+
+
+namespace Monitor{
+   struct QueueData 
+   {
+      uint64_t items_arrived;
+      uint64_t items_departed;
+      size_t   item_unit;
+   };
+}
 
 template < class T, 
            RingBufferType type = RingBufferType::Normal, 
+           bool monitor = false,
            size_t SIZE = 0 >  class RingBuffer : 
                public RingBufferBase< T, type >
 {
@@ -51,7 +64,49 @@ public:
 
 };
 
-template< class T, size_t SIZE > class RingBuffer< T, RingBufferType::SHM, SIZE> : 
+template< class T > class RingBuffer< T, 
+                                      RingBufferType::Normal,
+                                      true /* monitor */,
+                                      0 > : 
+      public RingBufferBase< T, RingBufferType::Normal >
+{
+public:
+   /**
+    * RingBuffer - default constructor, initializes basic
+    * data structures.
+    */
+   RingBuffer( const size_t n ) : RingBufferBase< T, RingBufferType::Normal >()
+   {
+      (this)->data = new Buffer::Data<T, 
+                                      RingBufferType::Normal >( n );
+   //   (this)->monitor = new std::thread( 
+   }
+
+   virtual ~RingBuffer()
+   {
+      monitor->join();
+      delete( monitor );
+      delete( (this)->data );
+   }
+
+private:
+   static void monitor_thread( Buffer::Data<T, RingBufferType::Normal > *buffer,
+                               volatile bool          &term,
+                               Monitor::QueueData     &data )
+   {
+      
+   }
+   std::thread    *monitor;
+   volatile bool  term;
+};
+
+/** 
+ * SHM 
+ */
+template< class T, size_t SIZE > class RingBuffer< T, 
+                                                   RingBufferType::SHM, 
+                                                   false, 
+                                                   SIZE > : 
    public RingBufferBase< T, RingBufferType::SHM >
 {
 public:

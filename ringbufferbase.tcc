@@ -38,8 +38,7 @@
 //#define NICE 1
 
 template < class T, 
-           RingBufferType type,
-           bool monitor = false > class RingBufferBase {
+           RingBufferType type > class RingBufferBase {
 public:
    /**
     * RingBuffer - default constructor, initializes basic
