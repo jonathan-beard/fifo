@@ -29,7 +29,7 @@
 #include "ringbuffertypes.hpp"
 #include "SystemClock.tcc"
 
-extern SystemClock< System > *system_clock;
+extern SystemClock< Cycle > *system_clock;
 
 
 namespace Monitor
