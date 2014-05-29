@@ -12,7 +12,7 @@ struct Data{
    {}
 
    size_t                 send_count;
-} data( 1e6) ;
+} data( 1e6 ) ;
 
 
 //#define USESHM 0
@@ -27,7 +27,7 @@ typedef RingBuffer< int64_t, RingBufferType::Normal, true >  TheBuffer;
 #endif
 
 
-auto *system_clock = new SystemClock< System >;
+auto *system_clock = new SystemClock< Cycle >;
 
 
 void
@@ -35,7 +35,7 @@ producer( Data &data, TheBuffer &buffer )
 {
    std::cout << "Producer thread starting!!\n";
    size_t current_count( 0 );
-   const double service_time( 10.0e-6 );
+   const double service_time( 10.0e-5 );
    while( current_count++ < data.send_count )
    {
       buffer.blockingWrite( current_count );
@@ -53,7 +53,7 @@ consumer( Data &data , TheBuffer &buffer )
    std::cout << "Consumer thread starting!!\n";
    size_t   current_count( 0 );
    int64_t  sentinel( 0 );
-   const double service_time( 5.0e-6 );
+   const double service_time( 5.0e-5 );
    while( true )
    {
       sentinel = buffer.blockingRead(); 
@@ -100,7 +100,7 @@ main( int argc, char **argv )
    
 #elif defined USELOCAL
    TheBuffer buffer( BUFFSIZE );
-
+   const auto start_time( system_clock->getTime() );
    std::thread a( producer, 
                   std::ref( data ), 
                   std::ref( buffer ) );
@@ -111,7 +111,7 @@ main( int argc, char **argv )
 #endif
    a.join();
    b.join();
-
+   const auto end_time( system_clock->getTime() );
 #if MONITOR
    auto &monitor_data( buffer.getQueueData() );
 
@@ -124,5 +124,6 @@ main( int argc, char **argv )
    std::cout << "Rho: " << (arrivalRate / departureRate) << "\n";
    std::cout << "Mean Occupancy: " << monitor_data.total_occupancy / monitor_data.samples << "\n";
 #endif
+   std::cerr << "Execution Time: " << (end_time - start_time ) << " seconds\n";
    return( EXIT_SUCCESS );
 }
