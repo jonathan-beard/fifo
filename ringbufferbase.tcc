@@ -35,7 +35,7 @@
  * writes or blocking for space, otherwise blocking will
  * actively spin while waiting.
  */
-//#define NICE 1
+#define NICE 1
 
 template < class T, 
            RingBufferType type > class RingBufferBase {
@@ -44,12 +44,16 @@ public:
     * RingBuffer - default constructor, initializes basic
     * data structures.
     */
-   RingBufferBase() : data( nullptr )
+   RingBufferBase() : data( nullptr ),
+                      read_count( 0 ),
+                      write_count( 0 )
    {
    }
    
    virtual ~RingBufferBase()
    {
+      read_count = 0;
+      write_count = 0;
    }
 
 
@@ -100,7 +104,7 @@ public:
     * can expect to write without blocking
     * @return  size_t
     */
-   size_t   spaceAvail()
+    size_t   spaceAvail()
    {
       return( data->max_cap - size() );
    }
@@ -110,7 +114,7 @@ public:
     * set at compile time by the constructor.
     * @return size_t
     */
-   size_t   capacity() const
+    size_t   capacity() const
    {
       return( data->max_cap );
    }
@@ -131,6 +135,7 @@ public:
       const size_t write_index( Pointer::val( data->write_pt ) );
       data->store[ write_index ] = item;
       Pointer::inc( data->write_pt );
+      write_count++;
    }
 
   
@@ -140,7 +145,7 @@ public:
     * @return  T, item read.  It is removed from the
     *          q as soon as it is read
     */
-   T blockingRead()
+    T blockingRead()
    {
       while( size() == 0 )
       {
@@ -151,6 +156,7 @@ public:
       const size_t read_index( Pointer::val( data->read_pt ) );
       T output = data->store[ read_index ];
       Pointer::inc( data->read_pt );
+      read_count++;
       return( output );
    }
 
@@ -162,7 +168,7 @@ public:
     * removing.
     * @return T&
     */
-   T& blockingPeek()
+    T& blockingPeek()
    {
       while( size() < 1 )
       {
@@ -177,5 +183,7 @@ public:
 
 protected:
    Buffer::Data< T, type>      *data;
+   std::uint64_t               read_count;
+   std::uint64_t               write_count;
 };
 #endif /* END _RINGBUFFERBASE_TCC_ */

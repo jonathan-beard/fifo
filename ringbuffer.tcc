@@ -32,12 +32,52 @@
 extern SystemClock< System > *system_clock;
 
 
-namespace Monitor{
+namespace Monitor
+{
    struct QueueData 
    {
-      uint64_t items_arrived;
-      uint64_t items_departed;
-      size_t   item_unit;
+      /**
+       * QueueData - basic constructor
+       * @param sample_frequency - in seconds
+       * @param nbytes - number of bytes in each queue item
+       */
+      QueueData( double sample_frequency, size_t nbytes ) :
+         items_arrived( 0 ),
+         max_arrived( 0 ),
+         arrived_samples( 0 ),
+         items_departed( 0 ),
+         max_departed( 0 ),
+         departed_samples( 0 ),
+         total_occupancy( 0 ),
+         item_unit( nbytes ),
+         samples( 0 ),
+         sample_frequency( sample_frequency )
+      {
+      }
+
+      QueueData( const QueueData &other ) : item_unit( other.item_unit ),
+                                            sample_frequency( other.sample_frequency )
+      {
+         items_arrived     = other.items_arrived;
+         max_arrived       = other.max_arrived;
+         arrived_samples   = other.arrived_samples;
+         items_departed    = other.items_departed;
+         max_departed      = other.max_departed;
+         departed_samples  = other.departed_samples;
+         total_occupancy   = other.total_occupancy;
+         samples           = other.samples;
+      }
+
+      uint64_t    items_arrived;
+      uint64_t    max_arrived;
+      uint64_t    arrived_samples;
+      uint64_t    items_departed;
+      uint64_t    max_departed;
+      uint64_t    departed_samples;
+      uint64_t    total_occupancy;
+      const size_t      item_unit;
+      uint64_t    samples;
+      const double sample_frequency;
    };
 }
 
@@ -66,8 +106,7 @@ public:
 
 template< class T > class RingBuffer< T, 
                                       RingBufferType::Normal,
-                                      true /* monitor */,
-                                      0 > : 
+                                      true /* monitor */ > :
       public RingBufferBase< T, RingBufferType::Normal >
 {
 public:
@@ -75,29 +114,73 @@ public:
     * RingBuffer - default constructor, initializes basic
     * data structures.
     */
-   RingBuffer( const size_t n ) : RingBufferBase< T, RingBufferType::Normal >()
+   RingBuffer( const size_t n ) : RingBufferBase< T, RingBufferType::Normal >(),
+                                  monitor_data( 1.0e-6, sizeof( T ) ),
+                                  monitor( nullptr ),
+                                  term( false )
    {
       (this)->data = new Buffer::Data<T, 
                                       RingBufferType::Normal >( n );
-   //   (this)->monitor = new std::thread( 
+
+      (this)->monitor = new std::thread( monitor_thread, 
+                                         std::ref( *(this) ),
+                                         std::ref( (this)->term ),
+                                         std::ref( (this)->monitor_data ) );
    }
+
+
 
    virtual ~RingBuffer()
    {
+      (this)->term = true;
       monitor->join();
       delete( monitor );
+      monitor = nullptr;
       delete( (this)->data );
    }
 
+   volatile Monitor::QueueData& 
+      getQueueData()
+   {
+      return( monitor_data );
+   }
+
 private:
-   static void monitor_thread( Buffer::Data<T, RingBufferType::Normal > *buffer,
+   static void monitor_thread( RingBuffer< T, 
+                                           RingBufferType::Normal,
+                                           true >     &buffer,
                                volatile bool          &term,
-                               Monitor::QueueData     &data )
+                               volatile Monitor::QueueData     &data )
    {
       
+      while( ! term )
+      {
+         const auto curr_arrived( buffer.read_count - data.items_arrived );
+         if( buffer.spaceAvail() )
+         {
+            data.max_arrived += curr_arrived;
+            data.arrived_samples++;
+         }
+         const auto curr_departed( buffer.write_count - data.items_departed );
+         if( buffer.size() > 1 )
+         {
+            data.max_departed += curr_departed;
+            data.departed_samples++;
+         }
+         data.items_arrived    = buffer.read_count;
+         data.items_departed   = buffer.write_count;
+         data.total_occupancy += buffer.size();
+         data.samples         += 1;
+         const auto stop_time( data.sample_frequency + system_clock->getTime() );
+         while( system_clock->getTime() < stop_time )
+         {
+            if( term ) break;
+         }
+      }
    }
-   std::thread    *monitor;
-   volatile bool  term;
+   volatile Monitor::QueueData monitor_data;
+   std::thread       *monitor;
+   volatile bool      term;
 };
 
 /** 

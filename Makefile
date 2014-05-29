@@ -1,8 +1,9 @@
 CC    ?= gcc
 CXX   ?= g++
 
-CFLAGS   =    -O0 -g -Wall -std=c99
-CXXFLAGS =  -O0 -g -Wall -std=c++11
+
+CFLAGS   =    -O3 -msse4.2 -Wall -std=c99
+CXXFLAGS =  -O3 -msse4.2 -Wall -std=c++11
 
 COBJS = getrandom
 CXXOBJS = main pointer shm 
