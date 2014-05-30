@@ -114,7 +114,7 @@ public:
     * set at compile time by the constructor.
     * @return size_t
     */
-    size_t   capacity() const
+   size_t   capacity() const
    {
       return( data->max_cap );
    }
@@ -183,6 +183,108 @@ public:
 
 protected:
    Buffer::Data< T, type>      *data;
+   std::uint64_t               read_count;
+   std::uint64_t               write_count;
+};
+
+
+/**
+ * Infinite / Dummy  specialization 
+ */
+template < class T > class RingBufferBase< T, RingBufferType::Infinite >
+{
+public:
+   /**
+    * RingBuffer - default constructor, initializes basic
+    * data structures.
+    */
+   RingBufferBase() : data( nullptr ),
+                      read_count( 0 ),
+                      write_count( 0 )
+   {
+   }
+   
+   virtual ~RingBufferBase()
+   {
+      read_count = 0;
+      write_count = 0;
+   }
+
+
+   /**
+    * size - as you'd expect it returns the number of 
+    * items currently in the queue.
+    * @return size_t
+    */
+   size_t   size()
+   {
+      return( 0 );
+   }
+   
+   /**
+    * spaceAvail - returns the amount of space currently
+    * available in the queue.  This is the amount a user
+    * can expect to write without blocking
+    * @return  size_t
+    */
+    size_t   spaceAvail()
+   {
+      return( data->max_cap - size() );
+   }
+  
+   /**
+    * capacity - returns the capacity of this queue which is 
+    * set at compile time by the constructor.
+    * @return size_t
+    */
+   size_t   capacity() const
+   {
+      return( data->max_cap );
+   }
+
+   /**
+    * blockingWrite - This version won't write anything, it'll
+    * increment the counter and simply return;
+    * @param   item, T
+    */
+   void  blockingWrite( T item )
+   {
+      write_count++;
+   }
+
+  
+   /**
+    * blockingRead - This version won't return any useful data,
+    * its just whatever is in the buffer which should be zeros.
+    * @return  T, item read.  It is removed from the
+    *          q as soon as it is read
+    */
+    T blockingRead()
+   {
+      const size_t read_index( 1 );
+      T output = data->store[ read_index ];
+      read_count++;
+      return( output );
+   }
+
+
+   /**
+    * blockingPeek() - look at a reference to the head of the
+    * the ring buffer.  This doesn't remove the item, but it 
+    * does give the user a chance to take a look at it without
+    * removing.
+    * @return T&
+    */
+    T& blockingPeek()
+   {
+      const size_t read_index( 1 );
+      T &output( data->store[ read_index ] );
+      return( output );
+   }
+
+protected:
+   /** go ahead and allocate a buffer **/
+   Buffer::Data< T, RingBufferType::Normal>      *data;
    std::uint64_t               read_count;
    std::uint64_t               write_count;
 };

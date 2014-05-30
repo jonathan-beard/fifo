@@ -8,10 +8,11 @@
 #include "SystemClock.tcc"
 
 struct Data{
-   Data( size_t send ) : send_count(  send )
+   Data( size_t send ) : send_count(  send ),
+                         term( false )
    {}
-
    size_t                 send_count;
+   volatile bool          term;
 } data( 1e6 ) ;
 
 
@@ -35,13 +36,14 @@ producer( Data &data, TheBuffer &buffer )
 {
    std::cout << "Producer thread starting!!\n";
    size_t current_count( 0 );
-   const double service_time( 10.0e-5 );
+   const double service_time( 10.0e-6 );
    while( current_count++ < data.send_count )
    {
       buffer.blockingWrite( current_count );
       const auto stop_time( system_clock->getTime() + service_time );
       while( system_clock->getTime() < stop_time );
    }
+   data.term = true;
    buffer.blockingWrite( -1 );
    std::cout << "Producer thread finished sending!!\n";
    return;
@@ -53,13 +55,13 @@ consumer( Data &data , TheBuffer &buffer )
    std::cout << "Consumer thread starting!!\n";
    size_t   current_count( 0 );
    int64_t  sentinel( 0 );
-   const double service_time( 5.0e-5 );
+   const double service_time( 20.0e-6 );
    while( true )
    {
       sentinel = buffer.blockingRead(); 
       const auto stop_time( system_clock->getTime() + service_time );
       while( system_clock->getTime() < stop_time );
-      if( sentinel == -1 )
+      if( sentinel == -1 || data.term )
       {
          break;
       }
