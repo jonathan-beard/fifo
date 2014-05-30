@@ -1,5 +1,5 @@
-CC    = clang
-CXX   = clang++
+CC    = icc
+CXX   = icpc
 
 
 CFLAGS   =  -O1 -Wall -std=c99

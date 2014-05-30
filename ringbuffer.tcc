@@ -155,8 +155,8 @@ private:
       
       while( ! term )
       {
-         const bool write_no_block( ! buffer.blocked_write );
-         const auto curr_arrived( buffer.write_count - data.items_arrived );
+         const bool write_no_block( buffer.write_stats.blocked == 0 );
+         const auto curr_arrived( buffer.write_stats.count - data.items_arrived );
          if( write_no_block  )
          {
             data.max_arrived += curr_arrived;
@@ -164,10 +164,10 @@ private:
          }
          else
          {
-            buffer.blocked_write = false;
+            buffer.write_stats.blocked = 0;
          }
-         const bool read_no_block( ! buffer.blocked_read );
-         const auto curr_departed( buffer.read_count - data.items_departed );
+         const bool read_no_block( buffer.read_stats.blocked == 0 );
+         const auto curr_departed( buffer.read_stats.count - data.items_departed );
          if( read_no_block )
          {
             data.max_departed += curr_departed;
@@ -175,10 +175,10 @@ private:
          }
          else
          {
-            buffer.blocked_read = false;
+            buffer.read_stats.blocked = 0;
          }
-         data.items_arrived    = buffer.write_count;
-         data.items_departed   = buffer.read_count;
+         data.items_arrived    = buffer.write_stats.count;
+         data.items_departed   = buffer.read_stats.count;
          data.total_occupancy += buffer.size();
          data.samples         += 1;
          const auto stop_time( data.sample_frequency + system_clock->getTime() );

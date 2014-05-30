@@ -37,22 +37,22 @@
  */
 #define NICE 1
 
-struct Blocked{
-   Blocked() : a( false ),
-               b( false )
+union Blocked{
+   Blocked() : count( 0 ),
+               blocked( 0 )
    {}
-   
-   static bool isBlocked( Blocked &bl )
+
+   Blocked( volatile Blocked &other )
    {
-      Blocked copy;
-      do
-      {
-         copy = bl;
-      }while( copy.a != copy.b );
-      return( copy.a );
+      a = other.a;
    }
-   volatile bool a;
-   volatile bool b;
+
+   struct{
+      std::uint32_t count;
+      std::uint32_t blocked;
+
+      std::uint64_t a;
+   };
 };
 
 template < class T, 
@@ -62,18 +62,12 @@ public:
     * RingBuffer - default constructor, initializes basic
     * data structures.
     */
-   RingBufferBase() : data( nullptr ),
-                      read_count( 0 ),
-                      write_count( 0 ),
-                      blocked_read( false ),
-                      blocked_write( false )
+   RingBufferBase() : data( nullptr )
    {
    }
    
    virtual ~RingBufferBase()
    {
-      read_count = 0;
-      write_count = 0;
    }
 
 
@@ -151,15 +145,15 @@ public:
 #ifdef NICE      
          std::this_thread::yield();
 #endif         
-         if( ! blocked_write )
+         if( write_stats.blocked == 0 )
          {   
-            blocked_write = true;
+            write_stats.blocked = 1;
          }
       }
       const size_t write_index( Pointer::val( data->write_pt ) );
       data->store[ write_index ] = item;
       Pointer::inc( data->write_pt );
-      write_count++;
+      write_stats.count++;
    }
 
   
@@ -176,15 +170,15 @@ public:
 #ifdef NICE      
          std::this_thread::yield();
 #endif        
-         if( ! blocked_read )
+         if( read_stats.blocked == 0 )
          {   
-            blocked_read = true;
+            read_stats.blocked  = 1;
          }
       }
       const size_t read_index( Pointer::val( data->read_pt ) );
       T output = data->store[ read_index ];
       Pointer::inc( data->read_pt );
-      read_count++;
+      read_stats.count++;
       return( output );
    }
 
@@ -211,10 +205,8 @@ public:
 
 protected:
    Buffer::Data< T, type>      *data;
-   std::uint64_t               read_count;
-   std::uint64_t               write_count;
-   volatile bool               blocked_read;
-   volatile bool               blocked_write;
+   volatile Blocked                             read_stats;
+   volatile Blocked                             write_stats;
 };
 
 
@@ -228,16 +220,12 @@ public:
     * RingBuffer - default constructor, initializes basic
     * data structures.
     */
-   RingBufferBase() : data( nullptr ),
-                      read_count( 0 ),
-                      write_count( 0 )
+   RingBufferBase() : data( nullptr )
    {
    }
    
    virtual ~RingBufferBase()
    {
-      read_count = 0;
-      write_count = 0;
    }
 
 
@@ -281,7 +269,7 @@ public:
    {
       const size_t read_index( 1 );
       data->store[ read_index ] = item ;
-      write_count++;
+      write_stats.count++;
    }
 
   
@@ -295,7 +283,7 @@ public:
    {
       const size_t read_index( 1 );
       T output = data->store[ read_index ];
-      read_count++;
+      read_stats.count++;
       return( output );
    }
 
@@ -317,9 +305,7 @@ public:
 protected:
    /** go ahead and allocate a buffer as a heap, doesn't really matter **/
    Buffer::Data< T, RingBufferType::Heap >      *data;
-   std::uint64_t               read_count;
-   std::uint64_t               write_count;
-   volatile                    bool blocked_read;
-   volatile                    bool blocked_write;
+   volatile Blocked                             read_stats;
+   volatile Blocked                             write_stats;
 };
 #endif /* END _RINGBUFFERBASE_TCC_ */
