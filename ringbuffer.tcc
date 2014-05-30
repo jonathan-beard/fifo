@@ -29,7 +29,7 @@
 #include "ringbuffertypes.hpp"
 #include "SystemClock.tcc"
 
-extern SystemClock< System > *system_clock;
+extern Clock *system_clock;
 
 
 namespace Monitor
@@ -82,7 +82,7 @@ namespace Monitor
 }
 
 template < class T, 
-           RingBufferType type = RingBufferType::Normal, 
+           RingBufferType type = RingBufferType::Heap, 
            bool monitor = false,
            size_t SIZE = 0 >  class RingBuffer : 
                public RingBufferBase< T, type >
@@ -105,22 +105,22 @@ public:
 };
 
 template< class T > class RingBuffer< T, 
-                                      RingBufferType::Normal,
+                                      RingBufferType::Heap,
                                       true /* monitor */ > :
-      public RingBufferBase< T, RingBufferType::Normal >
+      public RingBufferBase< T, RingBufferType::Heap >
 {
 public:
    /**
     * RingBuffer - default constructor, initializes basic
     * data structures.
     */
-   RingBuffer( const size_t n ) : RingBufferBase< T, RingBufferType::Normal >(),
+   RingBuffer( const size_t n ) : RingBufferBase< T, RingBufferType::Heap >(),
                                   monitor_data( 1.0e-8, sizeof( T ) ),
                                   monitor( nullptr ),
                                   term( false )
    {
       (this)->data = new Buffer::Data<T, 
-                                      RingBufferType::Normal >( n );
+                                      RingBufferType::Heap >( n );
 
       (this)->monitor = new std::thread( monitor_thread, 
                                          std::ref( *(this) ),
@@ -147,7 +147,7 @@ public:
 
 private:
    static void monitor_thread( RingBuffer< T, 
-                                           RingBufferType::Normal,
+                                           RingBufferType::Heap,
                                            true >     &buffer,
                                volatile bool          &term,
                                volatile Monitor::QueueData     &data )
@@ -155,8 +155,9 @@ private:
       
       while( ! term )
       {
+         const bool write_no_block( ! buffer.blocked_write );
          const auto curr_arrived( buffer.write_count - data.items_arrived );
-         if( ! buffer.blocked_write )
+         if( write_no_block  )
          {
             data.max_arrived += curr_arrived;
             data.arrived_samples++;
@@ -165,8 +166,9 @@ private:
          {
             buffer.blocked_write = false;
          }
+         const bool read_no_block( ! buffer.blocked_read );
          const auto curr_departed( buffer.read_count - data.items_departed );
-         if( ! buffer.blocked_read )
+         if( read_no_block )
          {
             data.max_departed += curr_departed;
             data.departed_samples++;
@@ -208,7 +210,7 @@ public:
                                   term( false )
    {
       (this)->data = new Buffer::Data<T, 
-                                      RingBufferType::Normal >( n );
+                                      RingBufferType::Heap >( n );
 
       (this)->monitor = new std::thread( monitor_thread, 
                                          std::ref( *(this) ),
@@ -270,20 +272,20 @@ private:
 };
 
 /** 
- * SHM 
+ * SharedMemory 
  */
 template< class T, size_t SIZE > class RingBuffer< T, 
-                                                   RingBufferType::SHM, 
+                                                   RingBufferType::SharedMemory, 
                                                    false, 
                                                    SIZE > : 
-   public RingBufferBase< T, RingBufferType::SHM >
+   public RingBufferBase< T, RingBufferType::SharedMemory >
 {
 public:
    RingBuffer( const std::string key,
                Direction         dir,
                bool              multi_threaded_init = true,
                const size_t      alignment = 8 ) : 
-               RingBufferBase< T, RingBufferType::SHM >(),
+               RingBufferBase< T, RingBufferType::SharedMemory >(),
                                               shm_key( key )
    {
       if( alignment % sizeof( void * ) != 0 )
@@ -293,12 +295,13 @@ public:
          exit( EXIT_FAILURE );
       }
       /** calc total size **/
-      total_size = sizeof(  Buffer::Data< T, RingBufferType::SHM , SIZE > );
+      total_size = 
+         sizeof(  Buffer::Data< T, RingBufferType::SharedMemory , SIZE > );
       
       /** store already set to nullptr **/
       try
       {
-         (this)->data = (Buffer::Data< T, RingBufferType::SHM>*) 
+         (this)->data = (Buffer::Data< T, RingBufferType::SharedMemory>*) 
                          SHM::Init( 
                          key.c_str(),
                          total_size );
@@ -308,8 +311,8 @@ public:
          try
          {
             (this)->data = (Buffer::Data< T, 
-                                          RingBufferType::SHM>*) 
-                                             SHM::Open( key.c_str() );
+                                          RingBufferType::SharedMemory>*) 
+                                          SHM::Open( key.c_str() );
          }
          catch( bad_shm_alloc &ex2 )
          {

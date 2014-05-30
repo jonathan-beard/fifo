@@ -37,6 +37,24 @@
  */
 #define NICE 1
 
+struct Blocked{
+   Blocked() : a( false ),
+               b( false )
+   {}
+   
+   static bool isBlocked( Blocked &bl )
+   {
+      Blocked copy;
+      do
+      {
+         copy = bl;
+      }while( copy.a != copy.b );
+      return( copy.a );
+   }
+   volatile bool a;
+   volatile bool b;
+};
+
 template < class T, 
            RingBufferType type > class RingBufferBase {
 public:

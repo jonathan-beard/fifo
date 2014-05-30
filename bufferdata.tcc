@@ -28,7 +28,9 @@
 namespace Buffer
 {
 
-template < class T, RingBufferType B = RingBufferType::Normal, size_t SIZE = 0 > struct Data
+template < class T, 
+           RingBufferType B = RingBufferType::Heap, 
+           size_t SIZE = 0 > struct Data
 {
    Data( size_t max_cap ) : read_pt( max_cap ),
                             write_pt( max_cap ),
@@ -54,7 +56,10 @@ template < class T, RingBufferType B = RingBufferType::Normal, size_t SIZE = 0 >
    T       *store;
 };
 
-template < class T, size_t SIZE > struct Data< T, RingBufferType::SHM, SIZE >
+template < class T, 
+           size_t SIZE > struct Data< T, 
+                                      RingBufferType::SharedMemory, 
+                                      SIZE >
 {
    Data( size_t max_cap ) : read_pt( max_cap ),
                             write_pt( max_cap ),
