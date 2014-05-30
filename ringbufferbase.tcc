@@ -261,6 +261,8 @@ public:
     */
    void  blockingWrite( T item )
    {
+      const size_t read_index( 1 );
+      data->store[ read_index ] = item ;
       write_count++;
    }
 
@@ -295,8 +297,8 @@ public:
    }
 
 protected:
-   /** go ahead and allocate a buffer **/
-   Buffer::Data< T, RingBufferType::Normal>      *data;
+   /** go ahead and allocate a buffer as a heap, doesn't really matter **/
+   Buffer::Data< T, RingBufferType::Heap >      *data;
    std::uint64_t               read_count;
    std::uint64_t               write_count;
    volatile                    bool blocked_read;

@@ -115,7 +115,7 @@ public:
     * data structures.
     */
    RingBuffer( const size_t n ) : RingBufferBase< T, RingBufferType::Normal >(),
-                                  monitor_data( 100.0e-9, sizeof( T ) ),
+                                  monitor_data( 1.0e-8, sizeof( T ) ),
                                   monitor( nullptr ),
                                   term( false )
    {

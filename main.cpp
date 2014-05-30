@@ -7,25 +7,24 @@
 #include "ringbuffer.tcc"
 #include "SystemClock.tcc"
 
-struct Data{
-   Data( size_t send ) : send_count(  send ),
-                         term( false )
+struct Data
+{
+   Data( size_t send ) : send_count(  send )
    {}
    size_t                 send_count;
-   volatile bool          term;
 } data( 1e6 );
 
 
-//#define USESHM 1
+//#define USESharedMemory 1
 //#define INFINITE 1
 #define USELOCAL 1
 #define BUFFSIZE 100000000
 #define MONITOR 1
 
-#ifdef USESHM
-typedef RingBuffer< int64_t, RingBufferType::SHM, BUFFSIZE > TheBuffer;
+#ifdef USESharedMemory
+typedef RingBuffer< int64_t, RingBufferType::SharedMemory, BUFFSIZE > TheBuffer;
 #elif defined USELOCAL
-typedef RingBuffer< int64_t, RingBufferType::Normal , true >  TheBuffer;
+typedef RingBuffer< int64_t, RingBufferType::Heap , true >  TheBuffer;
 #endif
 
 
@@ -37,16 +36,13 @@ producer( Data &data, TheBuffer &buffer )
 {
    std::cout << "Producer thread starting!!\n";
    size_t current_count( 0 );
-   const double service_time( 20.0e-6 );
+   const double service_time( 200.0e-6 );
    while( current_count++ < data.send_count )
    {
       buffer.blockingWrite( current_count );
       const auto stop_time( system_clock->getTime() + service_time );
       while( system_clock->getTime() < stop_time );
    }
-#ifdef INFINITE   
-   data.term = true;
-#endif
    buffer.blockingWrite( -1 );
    std::cout << "Producer thread finished sending!!\n";
    return;
@@ -58,13 +54,13 @@ consumer( Data &data , TheBuffer &buffer )
    std::cout << "Consumer thread starting!!\n";
    size_t   current_count( 0 );
    int64_t  sentinel( 0 );
-   const double service_time( 10.0e-6 );
+   const double service_time( 100.0e-6 );
    while( true )
    {
       sentinel = buffer.blockingRead(); 
       const auto stop_time( system_clock->getTime() + service_time );
       while( system_clock->getTime() < stop_time );
-      if( sentinel == -1 || data.term )
+      if( sentinel == -1 )
       {
          break;
       }
@@ -78,18 +74,18 @@ consumer( Data &data , TheBuffer &buffer )
 int 
 main( int argc, char **argv )
 {
-#ifdef USESHM
+#ifdef USESharedMemory
    char shmkey[ 256 ];
-   SHM::GenKey( shmkey, 256 );
+   SharedMemory::GenKey( shmkey, 256 );
    std::string key( shmkey );
    
    RingBuffer<int64_t, 
-              RingBufferType::SHM, 
+              RingBufferType::SharedMemory, 
               BUFFSIZE > buffer_a( key, 
                                    Direction::Producer, 
                                    false);
    RingBuffer<int64_t, 
-              RingBufferType::SHM, 
+              RingBufferType::SharedMemory, 
               BUFFSIZE > buffer_b( key, 
                                    Direction::Consumer, 
                                    false);
