@@ -115,7 +115,7 @@ public:
     * data structures.
     */
    RingBuffer( const size_t n ) : RingBufferBase< T, RingBufferType::Normal >(),
-                                  monitor_data( 1.0e-7, sizeof( T ) ),
+                                  monitor_data( 100.0e-9, sizeof( T ) ),
                                   monitor( nullptr ),
                                   term( false )
    {
@@ -156,16 +156,24 @@ private:
       while( ! term )
       {
          const auto curr_arrived( buffer.write_count - data.items_arrived );
-         if( buffer.spaceAvail() )
+         if( ! buffer.blocked_write )
          {
             data.max_arrived += curr_arrived;
             data.arrived_samples++;
          }
+         else
+         {
+            buffer.blocked_write = false;
+         }
          const auto curr_departed( buffer.read_count - data.items_departed );
-         if( buffer.size() > 1 )
+         if( ! buffer.blocked_read )
          {
             data.max_departed += curr_departed;
             data.departed_samples++;
+         }
+         else
+         {
+            buffer.blocked_read = false;
          }
          data.items_arrived    = buffer.write_count;
          data.items_departed   = buffer.read_count;

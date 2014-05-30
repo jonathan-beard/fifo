@@ -46,7 +46,9 @@ public:
     */
    RingBufferBase() : data( nullptr ),
                       read_count( 0 ),
-                      write_count( 0 )
+                      write_count( 0 ),
+                      blocked_read( false ),
+                      blocked_write( false )
    {
    }
    
@@ -131,6 +133,10 @@ public:
 #ifdef NICE      
          std::this_thread::yield();
 #endif         
+         if( ! blocked_write )
+         {   
+            blocked_write = true;
+         }
       }
       const size_t write_index( Pointer::val( data->write_pt ) );
       data->store[ write_index ] = item;
@@ -152,6 +158,10 @@ public:
 #ifdef NICE      
          std::this_thread::yield();
 #endif        
+         if( ! blocked_read )
+         {   
+            blocked_read = true;
+         }
       }
       const size_t read_index( Pointer::val( data->read_pt ) );
       T output = data->store[ read_index ];
@@ -185,6 +195,8 @@ protected:
    Buffer::Data< T, type>      *data;
    std::uint64_t               read_count;
    std::uint64_t               write_count;
+   volatile bool               blocked_read;
+   volatile bool               blocked_write;
 };
 
 
@@ -287,5 +299,7 @@ protected:
    Buffer::Data< T, RingBufferType::Normal>      *data;
    std::uint64_t               read_count;
    std::uint64_t               write_count;
+   volatile                    bool blocked_read;
+   volatile                    bool blocked_write;
 };
 #endif /* END _RINGBUFFERBASE_TCC_ */
