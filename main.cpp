@@ -13,7 +13,7 @@ struct Data{
    {}
    size_t                 send_count;
    volatile bool          term;
-} data( 1e6 ) ;
+} data( 1e5 ) ;
 
 
 //#define USESHM 0
@@ -28,7 +28,7 @@ typedef RingBuffer< int64_t, RingBufferType::Normal, true >  TheBuffer;
 #endif
 
 
-auto *system_clock = new SystemClock< Cycle >;
+auto *system_clock = new SystemClock< System >;
 
 
 void
@@ -55,7 +55,7 @@ consumer( Data &data , TheBuffer &buffer )
    std::cout << "Consumer thread starting!!\n";
    size_t   current_count( 0 );
    int64_t  sentinel( 0 );
-   const double service_time( 20.0e-6 );
+   const double service_time( 10.0e-6 );
    while( true )
    {
       sentinel = buffer.blockingRead(); 

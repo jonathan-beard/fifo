@@ -29,7 +29,7 @@
 #include "ringbuffertypes.hpp"
 #include "SystemClock.tcc"
 
-extern SystemClock< Cycle > *system_clock;
+extern SystemClock< System > *system_clock;
 
 
 namespace Monitor
@@ -155,20 +155,20 @@ private:
       
       while( ! term )
       {
-         const auto curr_arrived( buffer.read_count - data.items_arrived );
+         const auto curr_arrived( buffer.write_count - data.items_arrived );
          if( buffer.spaceAvail() )
          {
             data.max_arrived += curr_arrived;
             data.arrived_samples++;
          }
-         const auto curr_departed( buffer.write_count - data.items_departed );
+         const auto curr_departed( buffer.read_count - data.items_departed );
          if( buffer.size() > 1 )
          {
             data.max_departed += curr_departed;
             data.departed_samples++;
          }
-         data.items_arrived    = buffer.read_count;
-         data.items_departed   = buffer.write_count;
+         data.items_arrived    = buffer.write_count;
+         data.items_departed   = buffer.read_count;
          data.total_occupancy += buffer.size();
          data.samples         += 1;
          const auto stop_time( data.sample_frequency + system_clock->getTime() );
@@ -235,16 +235,20 @@ private:
       
       while( ! term )
       {
-         const auto curr_arrived( buffer.read_count - data.items_arrived );
+         const auto curr_arrived( buffer.write_count - data.items_arrived );
          data.max_arrived += curr_arrived;
          data.arrived_samples++;
-         const auto curr_departed( buffer.write_count - data.items_departed );
+         
+         const auto curr_departed( buffer.read_count - data.items_departed );
          data.max_departed += curr_departed;
          data.departed_samples++;
-         data.items_arrived    = buffer.read_count;
-         data.items_departed   = buffer.write_count;
+
+         data.items_arrived    = buffer.write_count;
+         data.items_departed   = buffer.read_count;
          data.total_occupancy += buffer.size();
+         
          data.samples         += 1;
+         
          const auto stop_time( data.sample_frequency + system_clock->getTime() );
          while( system_clock->getTime() < stop_time )
          {
