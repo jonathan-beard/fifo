@@ -30,7 +30,7 @@
 #include "SystemClock.tcc"
 
 extern Clock *system_clock;
-
+const double sample_freq = 1e-8;
 
 namespace Monitor
 {
@@ -115,7 +115,7 @@ public:
     * data structures.
     */
    RingBuffer( const size_t n ) : RingBufferBase< T, RingBufferType::Heap >(),
-                                  monitor_data( 1.0e-8, sizeof( T ) ),
+                                  monitor_data( sample_freq , sizeof( T ) ),
                                   monitor( nullptr ),
                                   term( false )
    {
