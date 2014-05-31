@@ -104,11 +104,11 @@ public:
 
 };
 
-template< class T, RingBufferType type, bool monitor > RingBufferBaseMonitor : public
+template< class T, RingBufferType type > class RingBufferBaseMonitor : public
    RingBufferBase< T, type >
 {
 public:
-   RingBufferBaseMonitor( const size_t n ) : RingBufferBase< T, type >,
+   RingBufferBaseMonitor( const size_t n ) : RingBufferBase< T, type >(),
                                              monitor_data( sample_freq, sizeof( T ) ),
                                              monitor( nullptr ),
                                              term( false )
@@ -123,9 +123,13 @@ public:
 
    }
 
-   virtual ~RingBuffer()
+   virtual ~RingBufferBaseMonitor()
    {
-
+      (this)->term = true;
+      monitor->join();
+      delete( monitor );
+      monitor = nullptr;
+      delete( (this)->data );
    }
 
    volatile Monitor::QueueData& 
@@ -170,6 +174,7 @@ protected:
          }
       }
    }
+   
    volatile Monitor::QueueData monitor_data;
    std::thread       *monitor;
    volatile bool      term;
@@ -178,63 +183,44 @@ protected:
 template< class T > class RingBuffer< T, 
                                       RingBufferType::Heap,
                                       true /* monitor */ > :
-      public RingBufferBase< T, RingBufferType::Heap >
+      public RingBufferBaseMonitor< T, RingBufferType::Heap >
 {
 public:
    /**
     * RingBuffer - default constructor, initializes basic
     * data structures.
     */
-   RingBuffer( const size_t n ) : RingBufferBase< T, RingBufferType::Heap >(),
-                                  monitor_data( sample_freq , sizeof( T ) ),
-                                  monitor( nullptr ),
-                                  term( false )
+   RingBuffer( const size_t n ) : RingBufferBaseMonitor< T, RingBufferType::Heap >( n )
    {
+      /** nothing really to do **/
    }
-
-
-
+   
    virtual ~RingBuffer()
    {
-      (this)->term = true;
-      monitor->join();
-      delete( monitor );
-      monitor = nullptr;
-      delete( (this)->data );
+      /** nothing really to do **/
    }
-
-private:
 };
 
 /** specialization for dummy one **/
 template< class T > class RingBuffer< T, 
                                       RingBufferType::Infinite,
                                       true /* monitor */ > :
-      public RingBufferBase< T, RingBufferType::Infinite >
+      public RingBufferBaseMonitor< T, RingBufferType::Infinite >
 {
 public:
    /**
     * RingBuffer - default constructor, initializes basic
     * data structures.
     */
-   RingBuffer( const size_t n ) : RingBufferBase< T, RingBufferType::Infinite >(),
-                                  monitor_data( 1.0e-7, sizeof( T ) ),
-                                  monitor( nullptr ),
-                                  term( false )
+   RingBuffer( const size_t n ) : 
+      RingBufferBaseMonitor< T, 
+                             RingBufferType::Infinite >( n )
    {
    }
-
-
-
    virtual ~RingBuffer()
    {
-      (this)->term = true;
-      monitor->join();
-      delete( monitor );
-      monitor = nullptr;
-      delete( (this)->data );
+      /** nothing really to do **/
    }
-
 };
 
 /** 
