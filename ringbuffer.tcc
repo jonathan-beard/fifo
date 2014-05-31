@@ -30,7 +30,7 @@
 #include "SystemClock.tcc"
 
 extern Clock *system_clock;
-const double sample_freq = 1e-8;
+const double sample_freq = 1e-7;
 
 namespace Monitor
 {
@@ -177,6 +177,7 @@ private:
          while( system_clock->getTime() < stop_time )
          {
             if( term ) break;
+            //needs to be fairly precisely timed so no yeilding here
          }
       }
    }

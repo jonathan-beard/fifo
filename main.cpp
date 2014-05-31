@@ -12,7 +12,7 @@ struct Data
    Data( size_t send ) : send_count(  send )
    {}
    size_t                 send_count;
-} data( 1e6 );
+} data( 1e7);
 
 
 //#define USESharedMemory 1
