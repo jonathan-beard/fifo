@@ -139,9 +139,8 @@ public:
    }
 
 protected:
-   static void monitor_thread( RingBuffer< T, 
-                                           RingBufferType::Heap,
-                                           true >     &buffer,
+   static void monitor_thread( RingBufferBaseMonitor< T, 
+                                           RingBufferType::Heap >     &buffer,
                                volatile bool          &term,
                                volatile Monitor::QueueData     &data )
    {

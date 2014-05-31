@@ -28,7 +28,7 @@ typedef RingBuffer< int64_t, RingBufferType::Heap , true >  TheBuffer;
 #endif
 
 
-Clock *system_clock = new SystemClock< System >;
+Clock *system_clock = new SystemClock< Cycle >;
 
 
 void
@@ -36,7 +36,7 @@ producer( Data &data, TheBuffer &buffer )
 {
    std::cout << "Producer thread starting!!\n";
    size_t current_count( 0 );
-   const double service_time( 2000.0e-6 );
+   const double service_time( 10.0e-6 );
    while( current_count++ < data.send_count )
    {
       buffer.blockingWrite( current_count );
@@ -54,7 +54,7 @@ consumer( Data &data , TheBuffer &buffer )
    std::cout << "Consumer thread starting!!\n";
    size_t   current_count( 0 );
    int64_t  sentinel( 0 );
-   const double service_time( 1000.0e-6 );
+   const double service_time( 5.0e-6 );
    while( true )
    {
       sentinel = buffer.blockingRead(); 
