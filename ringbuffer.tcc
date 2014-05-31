@@ -30,7 +30,7 @@
 #include "SystemClock.tcc"
 
 extern Clock *system_clock;
-const double sample_freq = 1e-7;
+const double sample_freq = 1e-6;
 
 namespace Monitor
 {
@@ -104,20 +104,14 @@ public:
 
 };
 
-template< class T > class RingBuffer< T, 
-                                      RingBufferType::Heap,
-                                      true /* monitor */ > :
-      public RingBufferBase< T, RingBufferType::Heap >
+template< class T, RingBufferType type, bool monitor > RingBufferBaseMonitor : public
+   RingBufferBase< T, type >
 {
 public:
-   /**
-    * RingBuffer - default constructor, initializes basic
-    * data structures.
-    */
-   RingBuffer( const size_t n ) : RingBufferBase< T, RingBufferType::Heap >(),
-                                  monitor_data( sample_freq , sizeof( T ) ),
-                                  monitor( nullptr ),
-                                  term( false )
+   RingBufferBaseMonitor( const size_t n ) : RingBufferBase< T, type >,
+                                             monitor_data( sample_freq, sizeof( T ) ),
+                                             monitor( nullptr ),
+                                             term( false )
    {
       (this)->data = new Buffer::Data<T, 
                                       RingBufferType::Heap >( n );
@@ -126,17 +120,12 @@ public:
                                          std::ref( *(this) ),
                                          std::ref( (this)->term ),
                                          std::ref( (this)->monitor_data ) );
+
    }
-
-
 
    virtual ~RingBuffer()
    {
-      (this)->term = true;
-      monitor->join();
-      delete( monitor );
-      monitor = nullptr;
-      delete( (this)->data );
+
    }
 
    volatile Monitor::QueueData& 
@@ -145,7 +134,7 @@ public:
       return( monitor_data );
    }
 
-private:
+protected:
    static void monitor_thread( RingBuffer< T, 
                                            RingBufferType::Heap,
                                            true >     &buffer,
@@ -186,6 +175,37 @@ private:
    volatile bool      term;
 };
 
+template< class T > class RingBuffer< T, 
+                                      RingBufferType::Heap,
+                                      true /* monitor */ > :
+      public RingBufferBase< T, RingBufferType::Heap >
+{
+public:
+   /**
+    * RingBuffer - default constructor, initializes basic
+    * data structures.
+    */
+   RingBuffer( const size_t n ) : RingBufferBase< T, RingBufferType::Heap >(),
+                                  monitor_data( sample_freq , sizeof( T ) ),
+                                  monitor( nullptr ),
+                                  term( false )
+   {
+   }
+
+
+
+   virtual ~RingBuffer()
+   {
+      (this)->term = true;
+      monitor->join();
+      delete( monitor );
+      monitor = nullptr;
+      delete( (this)->data );
+   }
+
+private:
+};
+
 /** specialization for dummy one **/
 template< class T > class RingBuffer< T, 
                                       RingBufferType::Infinite,
@@ -202,13 +222,6 @@ public:
                                   monitor( nullptr ),
                                   term( false )
    {
-      (this)->data = new Buffer::Data<T, 
-                                      RingBufferType::Heap >( n );
-
-      (this)->monitor = new std::thread( monitor_thread, 
-                                         std::ref( *(this) ),
-                                         std::ref( (this)->term ),
-                                         std::ref( (this)->monitor_data ) );
    }
 
 
@@ -222,46 +235,6 @@ public:
       delete( (this)->data );
    }
 
-   volatile Monitor::QueueData& 
-      getQueueData()
-   {
-      return( monitor_data );
-   }
-
-private:
-   static void monitor_thread( RingBuffer< T, 
-                                           RingBufferType::Infinite,
-                                           true >     &buffer,
-                               volatile bool          &term,
-                               volatile Monitor::QueueData     &data )
-   {
-      
-      while( ! term )
-      {
-         const auto curr_arrived( buffer.write_count - data.items_arrived );
-         data.max_arrived += curr_arrived;
-         data.arrived_samples++;
-         
-         const auto curr_departed( buffer.read_count - data.items_departed );
-         data.max_departed += curr_departed;
-         data.departed_samples++;
-
-         data.items_arrived    = buffer.write_count;
-         data.items_departed   = buffer.read_count;
-         data.total_occupancy += buffer.size();
-         
-         data.samples         += 1;
-         
-         const auto stop_time( data.sample_frequency + system_clock->getTime() );
-         while( system_clock->getTime() < stop_time )
-         {
-            if( term ) break;
-         }
-      }
-   }
-   volatile Monitor::QueueData monitor_data;
-   std::thread       *monitor;
-   volatile bool      term;
 };
 
 /** 
