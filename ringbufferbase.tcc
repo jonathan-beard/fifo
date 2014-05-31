@@ -38,21 +38,19 @@
 #define NICE 1
 
 union Blocked{
-   Blocked() : count( 0 ),
-               blocked( 0 )
+   Blocked() : all( 0 )
    {}
 
    Blocked( volatile Blocked &other )
    {
-      a = other.a;
+      all = other.all;
    }
 
    struct{
       std::uint32_t count;
       std::uint32_t blocked;
-
-      std::uint64_t a;
    };
+   std::uint64_t all;
 };
 
 template < class T, 

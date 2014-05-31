@@ -155,30 +155,22 @@ private:
       
       while( ! term )
       {
-         const bool write_no_block( buffer.write_stats.blocked == 0 );
-         const auto curr_arrived( buffer.write_stats.count - data.items_arrived );
-         if( write_no_block  )
+         const Blocked write_copy( buffer.write_stats );
+         buffer.write_stats.all = 0;
+         if( ! write_copy.blocked  )
          {
-            data.max_arrived += curr_arrived;
+            data.max_arrived += write_copy.count;
             data.arrived_samples++;
          }
-         else
+
+         const Blocked read_copy( buffer.read_stats );
+         buffer.read_stats.all = 0;
+         if( ! read_copy.blocked )
          {
-            buffer.write_stats.blocked = 0;
-         }
-         const bool read_no_block( buffer.read_stats.blocked == 0 );
-         const auto curr_departed( buffer.read_stats.count - data.items_departed );
-         if( read_no_block )
-         {
-            data.max_departed += curr_departed;
+            data.max_departed += read_copy.count;
             data.departed_samples++;
          }
-         else
-         {
-            buffer.read_stats.blocked = 0;
-         }
-         data.items_arrived    = buffer.write_stats.count;
-         data.items_departed   = buffer.read_stats.count;
+         
          data.total_occupancy += buffer.size();
          data.samples         += 1;
          const auto stop_time( data.sample_frequency + system_clock->getTime() );
