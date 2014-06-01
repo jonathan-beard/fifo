@@ -30,7 +30,7 @@
 #include "SystemClock.tcc"
 
 extern Clock *system_clock;
-const double sample_freq = 1e-6;
+const double sample_freq = 1e-8;
 
 namespace Monitor
 {
@@ -139,6 +139,16 @@ public:
    }
 
 protected:
+   /**
+    * monitor_thread - implements queue monitoring for arrival rate and
+    * departure rate (service rate) from the queue.  Also enables mean 
+    * queue occupancy monitoring.  Other functions could easily be added
+    * as well, such as an all full counter, or a full histogram for each
+    * queue position.
+    * @param buffer - ring buffer of this type
+    * @param term   - bool to stop the monitor thread
+    * @param data   - state data to return to the process monitoring this queue
+    */
    static void monitor_thread( RingBufferBaseMonitor< T, 
                                            RingBufferType::Heap >     &buffer,
                                volatile bool          &term,

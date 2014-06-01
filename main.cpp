@@ -12,7 +12,7 @@ struct Data
    Data( size_t send ) : send_count(  send )
    {}
    size_t                 send_count;
-} data( 1e5 );
+} data( 1e7 );
 
 
 //#define USESharedMemory 1
@@ -36,7 +36,7 @@ producer( Data &data, TheBuffer &buffer )
 {
    std::cout << "Producer thread starting!!\n";
    size_t current_count( 0 );
-   const double service_time( 10.0e-6 );
+   const double service_time( 2.0e-6 );
    while( current_count++ < data.send_count )
    {
       buffer.blockingWrite( current_count );
@@ -54,7 +54,7 @@ consumer( Data &data , TheBuffer &buffer )
    std::cout << "Consumer thread starting!!\n";
    size_t   current_count( 0 );
    int64_t  sentinel( 0 );
-   const double service_time( 5.0e-6 );
+   const double service_time( 1.0e-6 );
    while( true )
    {
       sentinel = buffer.blockingRead(); 
