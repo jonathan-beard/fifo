@@ -153,6 +153,32 @@ public:
       Pointer::inc( data->write_pt );
       write_stats.count++;
    }
+   
+   template< class iterator_type >
+   void blockingWrite( iterator_type begin, iterator_type end )
+   {
+      while( begin != end )
+      {
+         if( spaceAvail() == 0 )
+         {
+#ifdef NICE
+            std::this_thread::yield();
+#endif
+            if( write_stats.blocked == 0 )
+            {
+               write_stats.blocked == 1;
+            }
+         }
+         else
+         {
+            const size_t write_index( Pointer::val( data->write_pt ) );
+            data->store[ write_index ] = (*begin);
+            Pointer::inc( data->write_pt );
+            write_stats.count++;
+            begin++;
+         }
+      }
+   }
 
   
    /**
@@ -270,6 +296,11 @@ public:
       write_stats.count++;
    }
 
+   template< class iterator_type >
+   void blockingWrite( iterator_type begin, iterator_type end )
+   {
+      //TODO, implement this 
+   }
   
    /**
     * blockingRead - This version won't return any useful data,

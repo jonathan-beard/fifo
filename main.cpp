@@ -6,7 +6,7 @@
 #include <unistd.h>
 #include "ringbuffer.tcc"
 #include "SystemClock.tcc"
-
+#include <array>
 struct Data
 {
    Data( size_t send ) : send_count(  send )
@@ -30,6 +30,8 @@ typedef RingBuffer< int64_t, RingBufferType::Infinite , true >  TheBuffer;
 Clock *system_clock = new SystemClock< System >;
 
 
+std::array< int64_t, 5 > arr = {{1,2,3,4,5}};
+
 void
 producer( Data &data, TheBuffer &buffer )
 {
@@ -38,7 +40,7 @@ producer( Data &data, TheBuffer &buffer )
    const double service_time( 10.0e-6 );
    while( current_count++ < data.send_count )
    {
-      buffer.blockingWrite( current_count );
+      buffer.blockingWrite( arr.begin(), arr.end() );
       const auto stop_time( system_clock->getTime() + service_time );
       while( system_clock->getTime() < stop_time );
    }
