@@ -149,8 +149,7 @@ protected:
     * @param term   - bool to stop the monitor thread
     * @param data   - state data to return to the process monitoring this queue
     */
-   static void monitor_thread( RingBufferBaseMonitor< T, 
-                                           RingBufferType::Heap >     &buffer,
+   static void monitor_thread( RingBufferBaseMonitor< T, type >     &buffer,
                                volatile bool          &term,
                                volatile Monitor::QueueData     &data )
    {
@@ -221,9 +220,7 @@ public:
     * RingBuffer - default constructor, initializes basic
     * data structures.
     */
-   RingBuffer( const size_t n ) : 
-      RingBufferBaseMonitor< T, 
-                             RingBufferType::Infinite >( n )
+   RingBuffer( const size_t n ) : RingBufferBaseMonitor< T, RingBufferType::Infinite >( n )
    {
    }
    virtual ~RingBuffer()

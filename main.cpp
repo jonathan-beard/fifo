@@ -12,11 +12,10 @@ struct Data
    Data( size_t send ) : send_count(  send )
    {}
    size_t                 send_count;
-} data( 1e7 );
+} data( 1e5 );
 
 
 //#define USESharedMemory 1
-//#define INFINITE 1
 #define USELOCAL 1
 #define BUFFSIZE 100000000
 #define MONITOR 1
@@ -24,11 +23,11 @@ struct Data
 #ifdef USESharedMemory
 typedef RingBuffer< int64_t, RingBufferType::SharedMemory, BUFFSIZE > TheBuffer;
 #elif defined USELOCAL
-typedef RingBuffer< int64_t, RingBufferType::Heap , true >  TheBuffer;
+typedef RingBuffer< int64_t, RingBufferType::Infinite , true >  TheBuffer;
 #endif
 
 
-Clock *system_clock = new SystemClock< Cycle >;
+Clock *system_clock = new SystemClock< System >;
 
 
 void
@@ -36,7 +35,7 @@ producer( Data &data, TheBuffer &buffer )
 {
    std::cout << "Producer thread starting!!\n";
    size_t current_count( 0 );
-   const double service_time( 2.0e-6 );
+   const double service_time( 10.0e-6 );
    while( current_count++ < data.send_count )
    {
       buffer.blockingWrite( current_count );
@@ -54,7 +53,7 @@ consumer( Data &data , TheBuffer &buffer )
    std::cout << "Consumer thread starting!!\n";
    size_t   current_count( 0 );
    int64_t  sentinel( 0 );
-   const double service_time( 1.0e-6 );
+   const double service_time( 5.0e-6 );
    while( true )
    {
       sentinel = buffer.blockingRead(); 
