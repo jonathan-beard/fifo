@@ -40,7 +40,7 @@ producer( Data &data, TheBuffer &buffer )
    const double service_time( 10.0e-6 );
    while( current_count++ < data.send_count )
    {
-      buffer.blockingWrite( arr.begin(), arr.end() );
+      buffer.blockingWrite( cuurent_count );
       const auto stop_time( system_clock->getTime() + service_time );
       while( system_clock->getTime() < stop_time );
    }
