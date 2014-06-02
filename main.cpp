@@ -23,7 +23,7 @@ struct Data
 #ifdef USESharedMemory
 typedef RingBuffer< int64_t, RingBufferType::SharedMemory, BUFFSIZE > TheBuffer;
 #elif defined USELOCAL
-typedef RingBuffer< int64_t, RingBufferType::Infinite , true >  TheBuffer;
+typedef RingBuffer< int64_t, RingBufferType::Heap , true >  TheBuffer;
 #endif
 
 
@@ -54,17 +54,18 @@ consumer( Data &data , TheBuffer &buffer )
 {
    std::cout << "Consumer thread starting!!\n";
    size_t   current_count( 0 );
-   int64_t  sentinel( 0 );
    const double service_time( 5.0e-6 );
    while( true )
    {
-      sentinel = buffer.blockingRead(); 
+      auto *sentinel( buffer.blockingRead<1>() ); 
       const auto stop_time( system_clock->getTime() + service_time );
       while( system_clock->getTime() < stop_time );
-      if( sentinel == -1 )
+      if( (*sentinel)[0] == -1 )
       {
+         delete( sentinel );
          break;
       }
+      delete( sentinel );
       current_count++;
    }
    std::cout << "Received: " << current_count << "\n";

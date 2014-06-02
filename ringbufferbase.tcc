@@ -166,7 +166,7 @@ public:
 #endif
             if( write_stats.blocked == 0 )
             {
-               write_stats.blocked == 1;
+               write_stats.blocked = 1;
             }
          }
          else
@@ -187,22 +187,47 @@ public:
     * @return  T, item read.  It is removed from the
     *          q as soon as it is read
     */
-    T blockingRead()
+//    T blockingRead()
+//   {
+//      while( size() == 0 )
+//      {
+//#ifdef NICE      
+//         std::this_thread::yield();
+//#endif        
+//         if( read_stats.blocked == 0 )
+//         {   
+//            read_stats.blocked  = 1;
+//         }
+//      }
+//      const size_t read_index( Pointer::val( data->read_pt ) );
+//      T output = data->store[ read_index ];
+//      Pointer::inc( data->read_pt );
+//      read_stats.count++;
+//      return( output );
+//   }
+
+   template< size_t N >
+   std::array< T, N >*  blockingRead()
    {
-      while( size() == 0 )
+      while( size() < N )
       {
-#ifdef NICE      
+#ifdef NICE
          std::this_thread::yield();
-#endif        
+#endif
          if( read_stats.blocked == 0 )
-         {   
-            read_stats.blocked  = 1;
+         {
+            read_stats.blocked = 1;
          }
       }
-      const size_t read_index( Pointer::val( data->read_pt ) );
-      T output = data->store[ read_index ];
-      Pointer::inc( data->read_pt );
-      read_stats.count++;
+      auto *output( new std::array< T, N >() );
+      //TODO, this section could be optimized quite a bit
+      for( size_t i( 0 ); i < N; i++ )
+      {
+         const size_t read_index( Pointer::val( data->read_pt ) );
+         (*output)[ i ] = data->store[ read_index ];
+         Pointer::inc( data->read_pt );
+         read_stats.count++;
+      }
       return( output );
    }
 
