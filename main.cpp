@@ -12,7 +12,7 @@ struct Data
    Data( size_t send ) : send_count(  send )
    {}
    size_t                 send_count;
-} data( 1e5 );
+} data( 1e6 );
 
 
 //#define USESharedMemory 1
@@ -24,12 +24,12 @@ struct Data
 typedef RingBuffer< int64_t, RingBufferType::SharedMemory, BUFFSIZE > TheBuffer;
 #elif defined USELOCAL
 typedef RingBuffer< int64_t /* buffer type */,
-                    RingBufferType::Heap /* allocation type */, 
+                    RingBufferType::Heap /* allocation type */,
                     true /* turn on monitoring */ >  TheBuffer;
 #endif
 
 
-Clock *system_clock = new SystemClock< System >;
+Clock *system_clock = new SystemClock< Cycle >;
 
 
 std::array< int64_t, 5 > arr = {{1,2,3,4,5}};
@@ -43,8 +43,8 @@ producer( Data &data, TheBuffer &buffer )
    while( current_count++ < data.send_count )
    {
       buffer.push_back( current_count );
-      //const auto stop_time( system_clock->getTime() + service_time );
-      //while( system_clock->getTime() < stop_time );
+      const auto stop_time( system_clock->getTime() + service_time );
+      while( system_clock->getTime() < stop_time );
    }
    buffer.push_back( -1 );
    std::cout << "Producer thread finished sending!!\n";
@@ -65,8 +65,8 @@ consumer( Data &data , TheBuffer &buffer )
          break;
       }
       current_count++;
-      //const auto stop_time( system_clock->getTime() + service_time );
-      //while( system_clock->getTime() < stop_time );
+      const auto stop_time( system_clock->getTime() + service_time );
+      while( system_clock->getTime() < stop_time );
    }
    std::cout << "Received: " << current_count << "\n";
    return;

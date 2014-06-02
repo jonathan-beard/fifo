@@ -120,12 +120,12 @@ public:
    }
    
    /**
-    * spaceAvail - returns the amount of space currently
+    * space_avail - returns the amount of space currently
     * available in the queue.  This is the amount a user
     * can expect to write without blocking
     * @return  size_t
     */
-    size_t   spaceAvail()
+    size_t   space_avail()
    {
       return( data->max_cap - size() );
    }
@@ -147,7 +147,7 @@ public:
     */
    void  push_back( T item )
    {
-      while( spaceAvail() == 0 )
+      while( space_avail() == 0 )
       {
 #ifdef NICE      
          std::this_thread::yield();
@@ -178,7 +178,7 @@ public:
    {
       while( begin != end )
       {
-         if( spaceAvail() == 0 )
+         if( space_avail() == 0 )
          {
 #ifdef NICE
             std::this_thread::yield();
@@ -328,12 +328,12 @@ public:
    }
    
    /**
-    * spaceAvail - returns the amount of space currently
+    * space_avail - returns the amount of space currently
     * available in the queue.  This is the amount a user
     * can expect to write without blocking
     * @return  size_t
     */
-    size_t   spaceAvail()
+    size_t   space_avail()
    {
       return( data->max_cap - size() );
    }
