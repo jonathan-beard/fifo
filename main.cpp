@@ -12,7 +12,7 @@ struct Data
    Data( size_t send ) : send_count(  send )
    {}
    size_t                 send_count;
-} data( 1e5 );
+} data( 1e7 );
 
 
 //#define USESharedMemory 1
@@ -23,7 +23,7 @@ struct Data
 #ifdef USESharedMemory
 typedef RingBuffer< int64_t, RingBufferType::SharedMemory, BUFFSIZE > TheBuffer;
 #elif defined USELOCAL
-typedef RingBuffer< int64_t, RingBufferType::Heap , true >  TheBuffer;
+typedef RingBuffer< int64_t, RingBufferType::Heap, true >  TheBuffer;
 #endif
 
 
@@ -37,10 +37,10 @@ producer( Data &data, TheBuffer &buffer )
 {
    std::cout << "Producer thread starting!!\n";
    size_t current_count( 0 );
-   const double service_time( 10.0e-6 );
+   const double service_time( 2.0e-7 );
    while( current_count++ < data.send_count )
    {
-      buffer.blockingWrite( cuurent_count );
+      buffer.blockingWrite( arr.begin(), arr.end() );
       const auto stop_time( system_clock->getTime() + service_time );
       while( system_clock->getTime() < stop_time );
    }
@@ -54,7 +54,7 @@ consumer( Data &data , TheBuffer &buffer )
 {
    std::cout << "Consumer thread starting!!\n";
    size_t   current_count( 0 );
-   const double service_time( 5.0e-6 );
+   const double service_time( 1.0e-7 );
    while( true )
    {
       auto *sentinel( buffer.blockingRead<1>() ); 

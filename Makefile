@@ -3,7 +3,7 @@ CXX   = g++
 
 
 CFLAGS   =  -O1 -Wall -std=c99
-CXXFLAGS =  -O1 -Wall -std=c++11
+CXXFLAGS =  -O3 -opteron -Wall -std=c++11
 
 COBJS = getrandom
 CXXOBJS = main pointer shm Clock 

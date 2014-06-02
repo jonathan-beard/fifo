@@ -192,9 +192,9 @@ private:
              * pin the current thread 
              */
             cpu_set_t   *cpuset( nullptr );
-            const int8_t   processors_to_allocate( 1 );
             size_t cpu_allocate_size( -1 );
 #if   (__GLIBC_MINOR__ > 9 ) && (__GLIBC__ == 2 )
+            const int8_t   processors_to_allocate( 1 );
             cpuset = CPU_ALLOC( processors_to_allocate );
             assert( cpuset != nullptr );
             cpu_allocate_size = CPU_ALLOC_SIZE( processors_to_allocate );
