@@ -29,7 +29,7 @@ typedef RingBuffer< int64_t /* buffer type */,
 #endif
 
 
-Clock *system_clock = new SystemClock< Cycle >;
+Clock *system_clock = new SystemClock< System >;
 
 
 std::array< int64_t, 5 > arr = {{1,2,3,4,5}};
