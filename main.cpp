@@ -27,7 +27,7 @@ typedef RingBuffer< int64_t, RingBufferType::Heap , true >  TheBuffer;
 #endif
 
 
-Clock *system_clock = new SystemClock< System >;
+Clock *system_clock = new SystemClock< Cycle >;
 
 
 std::array< int64_t, 5 > arr = {{1,2,3,4,5}};
