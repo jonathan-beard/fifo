@@ -16,6 +16,12 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
+ * 
+ * Notes:  When using monitoring, the cycle counter is the most accurate for
+ * Linux / Unix platforms.  It is really not suited to OS X's mach_absolute_time()
+ * function since it is so slow relative to the movement of data, the 
+ * results returned for high throughput systems are simply not accurate
+ * on that platform.
  */
 #ifndef _RINGBUFFER_TCC_
 #define _RINGBUFFER_TCC_  1
@@ -220,7 +226,7 @@ public:
     * RingBuffer - default constructor, initializes basic
     * data structures.
     */
-   RingBuffer( const size_t n ) : RingBufferBaseMonitor< T, RingBufferType::Infinite >( n )
+   RingBuffer( const size_t n ) : RingBufferBaseMonitor< T, RingBufferType::Infinite >( 1 )
    {
    }
    virtual ~RingBuffer()

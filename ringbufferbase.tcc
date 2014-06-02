@@ -37,6 +37,11 @@
  */
 #define NICE 1
 
+/**
+ * Blocked - simple data structure to combine the send count
+ * and blocked flag in one simple structure.  Greatly improves
+ * synchronization between cores.
+ */
 union Blocked{
    Blocked() : all( 0 )
    {}
@@ -50,6 +55,7 @@ union Blocked{
       std::uint32_t count;
       std::uint32_t blocked;
    };
+   /** added for convenience of initialization **/
    std::uint64_t all;
 };
 
@@ -90,7 +96,10 @@ public:
          {
             /**
              * TODO, this condition is momentary, however there
-             * is a better way to fix this with atomic operations
+             * is a better way to fix this with atomic operations...
+             * or on second thought benchmarking shows the atomic
+             * operations slows the queue down drastically so, perhaps
+             * this is in fact the best of all possible returns.
              */
             return( data->max_cap );
          }
@@ -132,11 +141,11 @@ public:
    }
 
    /**
-    * blockingWrite - writs a single item to the queue, blocks
+    * push_back - writes a single item to the queue, blocks
     * until there is enough space.
     * @param   item, T
     */
-   void  blockingWrite( T item )
+   void  push_back( T item )
    {
       while( spaceAvail() == 0 )
       {
@@ -154,8 +163,18 @@ public:
       write_stats.count++;
    }
    
+   /**
+    * insert - inserts the range from begin to end in the queue,
+    * blocks until space is available.  If the range is greater than
+    * available space on the queue then it'll simply add items as 
+    * space becomes available.  There is the implicit assumption that
+    * another thread is consuming the data, so eventually there will
+    * be room.
+    * @param   begin - iterator_type, iterator to begin of range
+    * @param   end   - iterator_type, iterator to end of range
+    */
    template< class iterator_type >
-   void blockingWrite( iterator_type begin, iterator_type end )
+   void insert( iterator_type begin, iterator_type end )
    {
       while( begin != end )
       {
@@ -182,32 +201,39 @@ public:
 
   
    /**
-    * blockingRead - read one item from the ring buffer,
+    * pop - read one item from the ring buffer,
     * will block till there is data to be read
     * @return  T, item read.  It is removed from the
     *          q as soon as it is read
     */
-//    T blockingRead()
-//   {
-//      while( size() == 0 )
-//      {
-//#ifdef NICE      
-//         std::this_thread::yield();
-//#endif        
-//         if( read_stats.blocked == 0 )
-//         {   
-//            read_stats.blocked  = 1;
-//         }
-//      }
-//      const size_t read_index( Pointer::val( data->read_pt ) );
-//      T output = data->store[ read_index ];
-//      Pointer::inc( data->read_pt );
-//      read_stats.count++;
-//      return( output );
-//   }
+    T pop()
+   {
+      while( size() == 0 )
+      {
+#ifdef NICE      
+         std::this_thread::yield();
+#endif        
+         if( read_stats.blocked == 0 )
+         {   
+            read_stats.blocked  = 1;
+         }
+      }
+      const size_t read_index( Pointer::val( data->read_pt ) );
+      T output = data->store[ read_index ];
+      Pointer::inc( data->read_pt );
+      read_stats.count++;
+      return( output );
+   }
 
+   /**
+    * pop_range - pops a range and returns it as a std::array.  The
+    * exact range to be popped is specified as a template parameter.
+    * the static std::array was chosen as its a bit faster, however 
+    * this might change in future implementations to a std::vector
+    * or some other structure.
+    */
    template< size_t N >
-   std::array< T, N >*  blockingRead()
+   std::array< T, N >*  pop_range()
    {
       while( size() < N )
       {
@@ -233,13 +259,13 @@ public:
 
 
    /**
-    * blockingPeek() - look at a reference to the head of the
-    * the ring buffer.  This doesn't remove the item, but it 
+    * peek() - look at a reference to the head of the
+    * ring buffer.  This doesn't remove the item, but it 
     * does give the user a chance to take a look at it without
     * removing.
     * @return T&
     */
-    T& blockingPeek()
+    T& peek()
    {
       while( size() < 1 )
       {
@@ -250,6 +276,19 @@ public:
       const size_t read_index( Pointer::val( data->read_pt ) );
       T &output( data->store[ read_index ] );
       return( output );
+   }
+
+   void recycle()
+   {
+      Pointer::inc( data->read_pt );
+      read_stats.count++;
+   }
+
+   void recycle_range( const size_t range )
+   {
+      assert( range <= data->max_cap ); 
+      Pointer::incBy( range, data->read_pt );
+      read_stats.count += range;
    }
 
 protected:
@@ -310,50 +349,74 @@ public:
    }
 
    /**
-    * blockingWrite - This version won't write anything, it'll
+    * push_back - This version won't write anything, it'll
     * increment the counter and simply return;
     * @param   item, T
     */
-   void  blockingWrite( T item )
+   void  push_back( T item )
    {
-      const size_t read_index( 1 );
-      data->store[ read_index ] = item ;
+      data->store[ 0 ] = item ;
       write_stats.count++;
    }
 
    template< class iterator_type >
-   void blockingWrite( iterator_type begin, iterator_type end )
+   void insert( iterator_type begin, iterator_type end )
    {
-      //TODO, implement this 
+      while( begin != end )
+      {
+         data->store[ 0 ] = (*begin);
+         begin++;
+         write_stats.count++;
+      }
    }
-  
+ 
+
    /**
-    * blockingRead - This version won't return any useful data,
+    * pop - This version won't return any useful data,
     * its just whatever is in the buffer which should be zeros.
     * @return  T, item read.  It is removed from the
     *          q as soon as it is read
     */
-    T blockingRead()
+   T pop()
    {
-      const size_t read_index( 1 );
-      T output = data->store[ read_index ];
+      T output = data->store[ 0 ];
       read_stats.count++;
+      return( output );
+   }
+   
+   template< size_t N >
+   std::array< T, N >* pop_range()
+   {
+      auto *output( new std::array< T, N >( ) );
+      for( size_t i( 0 ); i < N; i++ )
+      {
+         (*output)[ i ] = data->store[ 0 ];
+      }
       return( output );
    }
 
 
    /**
-    * blockingPeek() - look at a reference to the head of the
+    * peek() - look at a reference to the head of the
     * the ring buffer.  This doesn't remove the item, but it 
     * does give the user a chance to take a look at it without
     * removing.
     * @return T&
     */
-    T& blockingPeek()
+    T& peek()
    {
-      const size_t read_index( 1 );
-      T &output( data->store[ read_index ] );
+      T &output( data->store[ 0 ] );
       return( output );
+   }
+   
+   void recycle()
+   {
+      read_stats.count++;
+   }
+
+   void recycle_range( const size_t range )
+   {
+      read_stats.count += range;
    }
 
 protected:

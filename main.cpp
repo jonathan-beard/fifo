@@ -12,7 +12,7 @@ struct Data
    Data( size_t send ) : send_count(  send )
    {}
    size_t                 send_count;
-} data( 1e7 );
+} data( 1e5 );
 
 
 //#define USESharedMemory 1
@@ -23,11 +23,13 @@ struct Data
 #ifdef USESharedMemory
 typedef RingBuffer< int64_t, RingBufferType::SharedMemory, BUFFSIZE > TheBuffer;
 #elif defined USELOCAL
-typedef RingBuffer< int64_t, RingBufferType::Heap, true >  TheBuffer;
+typedef RingBuffer< int64_t /* buffer type */,
+                    RingBufferType::Heap /* allocation type */, 
+                    true /* turn on monitoring */ >  TheBuffer;
 #endif
 
 
-Clock *system_clock = new SystemClock< Cycle >;
+Clock *system_clock = new SystemClock< System >;
 
 
 std::array< int64_t, 5 > arr = {{1,2,3,4,5}};
@@ -37,14 +39,14 @@ producer( Data &data, TheBuffer &buffer )
 {
    std::cout << "Producer thread starting!!\n";
    size_t current_count( 0 );
-   const double service_time( 2.0e-7 );
+   const double service_time( 10.0e-6 );
    while( current_count++ < data.send_count )
    {
-      buffer.blockingWrite( arr.begin(), arr.end() );
-      const auto stop_time( system_clock->getTime() + service_time );
-      while( system_clock->getTime() < stop_time );
+      buffer.push_back( current_count );
+      //const auto stop_time( system_clock->getTime() + service_time );
+      //while( system_clock->getTime() < stop_time );
    }
-   buffer.blockingWrite( -1 );
+   buffer.push_back( -1 );
    std::cout << "Producer thread finished sending!!\n";
    return;
 }
@@ -54,19 +56,17 @@ consumer( Data &data , TheBuffer &buffer )
 {
    std::cout << "Consumer thread starting!!\n";
    size_t   current_count( 0 );
-   const double service_time( 1.0e-7 );
+   const double service_time( 5.0e-6 );
    while( true )
    {
-      auto *sentinel( buffer.blockingRead<1>() ); 
-      const auto stop_time( system_clock->getTime() + service_time );
-      while( system_clock->getTime() < stop_time );
-      if( (*sentinel)[0] == -1 )
+      const auto sentinel( buffer.pop() );
+      if( sentinel == -1 )
       {
-         delete( sentinel );
          break;
       }
-      delete( sentinel );
       current_count++;
+      //const auto stop_time( system_clock->getTime() + service_time );
+      //while( system_clock->getTime() < stop_time );
    }
    std::cout << "Received: " << current_count << "\n";
    return;
