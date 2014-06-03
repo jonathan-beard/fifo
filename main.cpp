@@ -117,15 +117,7 @@ main( int argc, char **argv )
    const auto end_time( system_clock->getTime() );
 #if MONITOR
    auto &monitor_data( buffer.getQueueData() );
-
-   double arrivalRate( (double) (monitor_data.max_arrived * monitor_data.item_unit ) 
-                           / ( monitor_data.sample_frequency * monitor_data.arrived_samples ) );
-   double departureRate( (double) ( monitor_data.max_departed * monitor_data.item_unit ) 
-                           / (monitor_data.sample_frequency * monitor_data.departed_samples ) );
-   std::cout << "Arrival Rate: " << arrivalRate << "\n"; 
-   std::cout << "Departure Rate: " << departureRate << "\n";
-   std::cout << "Rho: " << (arrivalRate / departureRate) << "\n";
-   std::cout << "Mean Occupancy: " << monitor_data.total_occupancy / monitor_data.samples << "\n";
+   Monitor::QueueData::print( monitor_data, Monitor::QueueData::MB, std::cout ) << "\n";
 #endif
    std::cerr << "Execution Time: " << (end_time - start_time ) << " seconds\n";
    return( EXIT_SUCCESS );

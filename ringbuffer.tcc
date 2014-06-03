@@ -30,6 +30,7 @@
 #include <cstdlib>
 #include <thread>
 #include <cstring>
+#include <cstdint>
 #include "ringbufferbase.tcc"
 #include "shm.hpp"
 #include "ringbuffertypes.hpp"
@@ -42,6 +43,9 @@ namespace Monitor
 {
    struct QueueData 
    {
+      enum Units : std::size_t { Bytes = 0, KB, MB, GB, TB, N };
+      const static std::array< double, Units::N > unit_conversion;
+      const static std::array< std::string, N > unit_prints;
       /**
        * QueueData - basic constructor
        * @param sample_frequency - in seconds
@@ -49,10 +53,8 @@ namespace Monitor
        */
       QueueData( double sample_frequency, size_t nbytes ) :
          items_arrived( 0 ),
-         max_arrived( 0 ),
          arrived_samples( 0 ),
          items_departed( 0 ),
-         max_departed( 0 ),
          departed_samples( 0 ),
          total_occupancy( 0 ),
          item_unit( nbytes ),
@@ -61,24 +63,64 @@ namespace Monitor
       {
       }
 
-      QueueData( const QueueData &other ) : item_unit( other.item_unit ),
-                                            sample_frequency( other.sample_frequency )
+      QueueData( const QueueData &other ) : 
+                           item_unit( other.item_unit ),
+                           sample_frequency( other.sample_frequency )
       {
          items_arrived     = other.items_arrived;
-         max_arrived       = other.max_arrived;
          arrived_samples   = other.arrived_samples;
          items_departed    = other.items_departed;
-         max_departed      = other.max_departed;
          departed_samples  = other.departed_samples;
          total_occupancy   = other.total_occupancy;
          samples           = other.samples;
       }
 
+      static double get_arrival_rate( volatile QueueData &qd , 
+                                      Units unit )
+      {
+         return( ( (qd.items_arrived * qd.item_unit) / 
+                     (qd.sample_frequency * qd.arrived_samples ) ) * 
+                        unit_conversion[ unit ] );
+      }
+
+      static double get_departure_rate( volatile QueueData &qd, 
+                                        Units unit )
+      {
+         return( ( (qd.items_departed * qd.item_unit) / 
+                     (qd.sample_frequency * qd.departed_samples ) ) * 
+                        unit_conversion[ unit ] );
+      }
+
+      static double get_mean_queue_occupancy( volatile QueueData &qd ) 
+      {
+         return( qd.total_occupancy / qd.samples );
+      }
+
+      static double get_utilization( volatile QueueData &qd )
+      {
+         return( (double) qd.items_departed / (double) qd.items_arrived );
+      }
+
+      static std::ostream& print( volatile QueueData &qd, 
+                                  Units unit,
+                                  std::ostream &stream )
+      {
+         stream << "Arrival Rate: " << 
+            QueueData::get_arrival_rate( qd, unit ) << " " << 
+               QueueData::unit_prints[ unit ] << "/s" << "\n";
+         stream << "Departure Rate: " << 
+            QueueData::get_departure_rate( qd, unit ) << " " << 
+               QueueData::unit_prints[ unit ] << "/s" << "\n";
+         stream << "Mean Queue Occupancy: " << 
+            QueueData::get_mean_queue_occupancy( qd ) << "\n";
+         stream << "Utilization: " << 
+            QueueData::get_utilization( qd );
+         return( stream );
+      }
+
       uint64_t    items_arrived;
-      uint64_t    max_arrived;
       uint64_t    arrived_samples;
       uint64_t    items_departed;
-      uint64_t    max_departed;
       uint64_t    departed_samples;
       uint64_t    total_occupancy;
       const size_t      item_unit;
@@ -86,6 +128,16 @@ namespace Monitor
       const double sample_frequency;
    };
 }
+
+const std::array< double, Monitor::QueueData::Units::N > Monitor::QueueData::unit_conversion
+ = {{ 1              /** bytes **/,
+      0.000976562    /** kilobytes **/,
+      9.53674e-7     /** megabytes **/, 
+      9.31323e-10    /** gigabytes **/,
+      9.09495e-13    /** terabytes **/ }};
+
+const std::array< std::string, Monitor::QueueData::Units::N > Monitor::QueueData::unit_prints
+ = {{ "Bytes", "KB", "MB", "GB", "TB" }};
 
 template < class T, 
            RingBufferType type = RingBufferType::Heap, 
@@ -110,14 +162,16 @@ public:
 
 };
 
-template< class T, RingBufferType type > class RingBufferBaseMonitor : public
-   RingBufferBase< T, type >
+template< class T, 
+          RingBufferType type > class RingBufferBaseMonitor : 
+   public RingBufferBase< T, type >
 {
 public:
-   RingBufferBaseMonitor( const size_t n ) : RingBufferBase< T, type >(),
-                                             monitor_data( sample_freq, sizeof( T ) ),
-                                             monitor( nullptr ),
-                                             term( false )
+   RingBufferBaseMonitor( const size_t n ) : 
+            RingBufferBase< T, type >(),
+            monitor_data( sample_freq, sizeof( T ) ),
+            monitor( nullptr ),
+            term( false )
    {
       (this)->data = new Buffer::Data<T, 
                                       RingBufferType::Heap >( n );
@@ -166,7 +220,7 @@ protected:
          buffer.write_stats.all = 0;
          if( ! write_copy.blocked  )
          {
-            data.max_arrived += write_copy.count;
+            data.items_arrived += write_copy.count;
             data.arrived_samples++;
          }
 
@@ -174,7 +228,7 @@ protected:
          buffer.read_stats.all = 0;
          if( ! read_copy.blocked )
          {
-            data.max_departed += read_copy.count;
+            data.items_departed += read_copy.count;
             data.departed_samples++;
          }
          
