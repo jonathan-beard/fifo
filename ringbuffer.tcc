@@ -37,7 +37,7 @@
 #include "SystemClock.tcc"
 
 extern Clock *system_clock;
-const double sample_freq = 1e-5;
+const double sample_freq = 1e-6;
 
 namespace Monitor
 {

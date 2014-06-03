@@ -24,7 +24,7 @@ struct Data
 typedef RingBuffer< int64_t, RingBufferType::SharedMemory, BUFFSIZE > TheBuffer;
 #elif defined USELOCAL
 typedef RingBuffer< int64_t /* buffer type */,
-                    RingBufferType::Infinite /* allocation type */,
+                    RingBufferType::Heap/* allocation type */,
                     true /* turn on monitoring */ >  TheBuffer;
 #endif
 
