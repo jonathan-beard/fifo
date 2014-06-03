@@ -37,7 +37,7 @@
 #include "SystemClock.tcc"
 
 extern Clock *system_clock;
-const double sample_freq = 1e-8;
+const double sample_freq = 1e-5;
 
 namespace Monitor
 {
@@ -98,7 +98,10 @@ namespace Monitor
 
       static double get_utilization( volatile QueueData &qd )
       {
-         return( (double) qd.items_departed / (double) qd.items_arrived );
+         return( 
+            QueueData::get_arrival_rate( qd, Units::Bytes ) / 
+            QueueData::get_departure_rate( qd, Units::Bytes ) ); 
+
       }
 
       static std::ostream& print( volatile QueueData &qd, 
@@ -181,6 +184,11 @@ public:
                                          std::ref( (this)->term ),
                                          std::ref( (this)->monitor_data ) );
 
+   }
+
+   void  monitor_off()
+   {
+      (this)->term = true;
    }
 
    virtual ~RingBufferBaseMonitor()
