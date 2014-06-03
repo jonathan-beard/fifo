@@ -15,10 +15,11 @@ OBJS = $(addsuffix .o, $(COBJS) ) $(addsuffix .o, $(CXXOBJS) )
 
 ifneq ($(shell uname -s), Darwin)
 RT = -lrt
+STATIC = -static -static-libstdc++
 endif
 
 INCS = 
-LIBS = -lpthread $(RT)
+LIBS = -lpthread -lgsl -lgslcblas -lm -lc $(RT)
 
 compile: $(CXXFILES) $(CFILES)
 	$(MAKE) $(OBJS)

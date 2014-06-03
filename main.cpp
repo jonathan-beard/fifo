@@ -7,18 +7,21 @@
 #include "ringbuffer.tcc"
 #include "SystemClock.tcc"
 #include <array>
+#include <sstream>
+#include <fstream>
+#include "randomstring.tcc"
+
 struct Data
 {
    Data( size_t send ) : send_count(  send )
    {}
    size_t                 send_count;
-} data( 1e6 );
+} data( 1e7 );
 
 
 //#define USESharedMemory 1
 #define USELOCAL 1
 #define BUFFSIZE 1000000
-#define MONITOR 1
 
 #ifdef USESharedMemory
 typedef RingBuffer< int64_t, RingBufferType::SharedMemory, BUFFSIZE > TheBuffer;
@@ -35,7 +38,6 @@ Clock *system_clock = new SystemClock< Cycle >;
 void
 producer( Data &data, TheBuffer &buffer )
 {
-   std::cout << "Producer thread starting!!\n";
    size_t current_count( 0 );
    const double service_time( 100.0e-6 );
    while( current_count++ < data.send_count )
@@ -45,14 +47,12 @@ producer( Data &data, TheBuffer &buffer )
       while( system_clock->getTime() < stop_time );
    }
    buffer.push_back( -1 );
-   std::cout << "Producer thread finished sending!!\n";
    return;
 }
 
 void 
 consumer( Data &data , TheBuffer &buffer )
 {
-   std::cout << "Consumer thread starting!!\n";
    size_t   current_count( 0 );
    const double service_time( 50.0e-6 );
    while( true )
@@ -66,13 +66,10 @@ consumer( Data &data , TheBuffer &buffer )
       const auto stop_time( system_clock->getTime() + service_time );
       while( system_clock->getTime() < stop_time );
    }
-   std::cout << "Received: " << current_count << "\n";
    return;
 }
 
-
-int 
-main( int argc, char **argv )
+std::string test()
 {
 #ifdef USESharedMemory
    char shmkey[ 256 ];
@@ -101,7 +98,6 @@ main( int argc, char **argv )
    
 #elif defined USELOCAL
    TheBuffer buffer( BUFFSIZE );
-   const auto start_time( system_clock->getTime() );
    std::thread a( producer, 
                   std::ref( data ), 
                   std::ref( buffer ) );
@@ -113,11 +109,28 @@ main( int argc, char **argv )
    a.join();
    b.join();
    buffer.monitor_off();
-   const auto end_time( system_clock->getTime() );
-#if MONITOR
    auto &monitor_data( buffer.getQueueData() );
-   Monitor::QueueData::print( monitor_data, Monitor::QueueData::MB, std::cout ) << "\n";
-#endif
-   std::cerr << "Execution Time: " << (end_time - start_time ) << " seconds\n";
-   return( EXIT_SUCCESS );
+   std::stringstream ss;
+   Monitor::QueueData::print( monitor_data, Monitor::QueueData::Bytes, ss, true);
+   return( ss.str() );
+}
+
+
+int 
+main( int argc, char **argv )
+{
+   RandomString<30> rs;
+   const std::string root( "/project/mercury/svardata/" );
+   std::ofstream ofs( root + rs.get() + ".csv" );
+   if( ! ofs.is_open() )
+   {
+      std::cerr << "Couldn't open ofstream!!\n";
+      exit( EXIT_FAILURE );
+   }
+   int runs( 5 );
+   while( runs-- )
+   {
+      ofs << test() << "\n";
+   }
+   ofs.close();
 }

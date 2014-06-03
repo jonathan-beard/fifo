@@ -37,7 +37,7 @@
 #include "SystemClock.tcc"
 
 extern Clock *system_clock;
-const double sample_freq = 1e-6;
+const double sample_freq = 1e-7;
 
 namespace Monitor
 {
@@ -106,18 +106,30 @@ namespace Monitor
 
       static std::ostream& print( volatile QueueData &qd, 
                                   Units unit,
-                                  std::ostream &stream )
+                                  std::ostream &stream,
+                                  bool csv = false )
       {
-         stream << "Arrival Rate: " << 
-            QueueData::get_arrival_rate( qd, unit ) << " " << 
-               QueueData::unit_prints[ unit ] << "/s" << "\n";
-         stream << "Departure Rate: " << 
-            QueueData::get_departure_rate( qd, unit ) << " " << 
-               QueueData::unit_prints[ unit ] << "/s" << "\n";
-         stream << "Mean Queue Occupancy: " << 
-            QueueData::get_mean_queue_occupancy( qd ) << "\n";
-         stream << "Utilization: " << 
-            QueueData::get_utilization( qd );
+         if( ! csv )
+         {
+            stream << "Arrival Rate: " << 
+               QueueData::get_arrival_rate( qd, unit ) << " " << 
+                  QueueData::unit_prints[ unit ] << "/s" << "\n";
+            stream << "Departure Rate: " << 
+               QueueData::get_departure_rate( qd, unit ) << " " << 
+                  QueueData::unit_prints[ unit ] << "/s" << "\n";
+            stream << "Mean Queue Occupancy: " << 
+               QueueData::get_mean_queue_occupancy( qd ) << "\n";
+            stream << "Utilization: " << 
+               QueueData::get_utilization( qd );
+         }
+         else
+         {
+               stream << QueueData::get_arrival_rate( qd, unit ) << ","; 
+               stream << QueueData::get_departure_rate( qd, unit ) << ","; 
+               stream << QueueData::get_mean_queue_occupancy( qd ) << ",";
+               stream << QueueData::get_utilization( qd );
+
+         }
          return( stream );
       }
 
