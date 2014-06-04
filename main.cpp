@@ -16,12 +16,12 @@ struct Data
    Data( size_t send ) : send_count(  send )
    {}
    size_t                 send_count;
-} data( 1e7 );
+} data( 1e6 );
 
 
 //#define USESharedMemory 1
 #define USELOCAL 1
-#define BUFFSIZE 1000000
+#define BUFFSIZE 100
 
 #ifdef USESharedMemory
 typedef RingBuffer< int64_t, RingBufferType::SharedMemory, BUFFSIZE > TheBuffer;
@@ -39,7 +39,7 @@ void
 producer( Data &data, TheBuffer &buffer )
 {
    size_t current_count( 0 );
-   const double service_time( 100.0e-6 );
+   const double service_time( 10.0e-6 );
    while( current_count++ < data.send_count )
    {
       buffer.push_back( current_count );
@@ -54,7 +54,7 @@ void
 consumer( Data &data , TheBuffer &buffer )
 {
    size_t   current_count( 0 );
-   const double service_time( 50.0e-6 );
+   const double service_time( 5.0e-6 );
    while( true )
    {
       const auto sentinel( buffer.pop() );
@@ -111,7 +111,7 @@ std::string test()
    buffer.monitor_off();
    auto &monitor_data( buffer.getQueueData() );
    std::stringstream ss;
-   Monitor::QueueData::print( monitor_data, Monitor::QueueData::Bytes, ss, true);
+   Monitor::QueueData::print( monitor_data, Monitor::QueueData::Bytes , ss, true);
    return( ss.str() );
 }
 
@@ -120,15 +120,15 @@ int
 main( int argc, char **argv )
 {
    RandomString< 50 > rs;
-   const std::string root( "/project/mercury/svardata/" );
-   //const std::string root( "" );
+//   const std::string root( "/project/mercury/svardata/" );
+   const std::string root( "" );
    std::ofstream ofs( root + rs.get() + ".csv" );
    if( ! ofs.is_open() )
    {
       std::cerr << "Couldn't open ofstream!!\n";
       exit( EXIT_FAILURE );
    }
-   int runs( 50 );
+   int runs( 5 );
    while( runs-- )
    {
       ofs << test() << "\n";

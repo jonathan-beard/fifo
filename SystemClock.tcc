@@ -90,13 +90,13 @@ private:
                 b( (sclock_t) 0 )
       {}
       
-      void increment( const sclock_t inc = (sclock_t) 1 )
+      inline void increment( const sclock_t inc = (sclock_t) 1 )
       {
          a += inc;
          b += inc;
       }
 
-      sclock_t read()
+      inline sclock_t read()
       {
          struct{
             sclock_t a;
@@ -212,26 +212,26 @@ private:
                perror( "Failed to set affinity for cycle counter!!" );
                exit( EXIT_FAILURE );
             }
-            uint64_t current(  0 );
             uint64_t previous( 0 );
             /** begin assembly section to init previous **/
 #ifdef   __x86_64
-            uint64_t highBits = 0x0, lowBits = 0x0;
             __asm__ volatile("\
+               xorl     %%eax , %%eax     \n\
+               xorl     %%ecx , %%ecx     \n\
+               cpuid                            \n\
                rdtsc                            \n\
-               movq     %%rax, %[low]           \n\
-               movq     %%rdx, %[high]"          
+               shl      $32, %%rdx              \n\
+               orq      %%rax, %%rdx            \n\
+               movq     %%rdx, %[prev]"
                :
                /*outputs here*/
-               [low]    "=r" (lowBits),
-               [high]   "=r" (highBits)
+               [prev]    "=r" (previous)
                :
                /*inputs here*/
                :
                /*clobbered registers*/
-               "rax","rdx"
+               "rax","eax","rcx","ecx","rdx"
             );
-            previous = (lowBits & 0xffffffff) | (highBits << 32); 
 #elif    __ARMEL__
 #warning    Cycle counter not supported on this architecture
 #elif    __ARMHF__
@@ -244,22 +244,30 @@ private:
             {
                /** begin assembly sections **/
 #ifdef   __x86_64
-               uint64_t highBits = 0x0, lowBits = 0x0;
+               uint64_t difference;
                __asm__ volatile("\
-                  rdtsc                            \n\
-                  movq     %%rax, %[low]           \n\
-                  movq     %%rdx, %[high]"          
+               xorl     %%eax , %%eax     \n\
+               xorl     %%ecx , %%ecx     \n\
+               cpuid                            \n\
+               rdtsc                            \n\
+               shl      $32, %%rdx              \n\
+               orq      %%rax, %%rdx            \n\
+               movq     %%rdx, %%rax            \n\
+               movq     %[pre], %%rcx          \n\
+               subq     %%rcx, %%rax            \n\
+               movq     %%rax, %[diff]           \n\
+               movq     %%rdx, %[prev]"
                   :
                   /*outputs here*/
-                  [low]    "=r" (lowBits),
-                  [high]   "=r" (highBits)
+                  [diff]    "=r" ( difference ),
+                  [prev]    "=r" ( previous   )
                   :
                   /*inputs here*/
+                  [pre]    "m" ( previous   )
                   :
                   /*clobbered registers*/
-                  "rax","rdx"
+                  "rax","eax","rcx","ecx","rdx"
                );
-               current = (lowBits & 0xffffffff) | (highBits << 32);
 #elif    __ARMEL__
 #warning    Cycle counter not supported on this architecture
 #elif    __ARMHF__
@@ -267,10 +275,10 @@ private:
 #else
 #warning    Cycle counter not supported on this architecture
 #endif
-               const uint64_t diff( current - previous );
-               previous = current;
                /* convert to seconds for increment */
-               const sclock_t seconds( (sclock_t) diff / (sclock_t) frequency );
+               const sclock_t seconds( (sclock_t) difference / 
+                                       (sclock_t) frequency );
+
                clock->increment( seconds );
             };
 #else
