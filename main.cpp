@@ -127,7 +127,7 @@ main( int argc, char **argv )
       std::cerr << "Couldn't open ofstream!!\n";
       exit( EXIT_FAILURE );
    }
-   int runs( 5 );
+   int runs( 50 );
    while( runs-- )
    {
       ofs << test() << "\n";
