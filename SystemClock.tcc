@@ -67,18 +67,6 @@ public:
          perror( "Failed to create timer thread, exiting." );
          exit( EXIT_FAILURE );
       }
-      struct sched_param param;
-      std::memset( &param, 0, sizeof( struct sched_param ) );
-      int    policy( 0 );
-      errno = 0;
-      if( pthread_getschedparam( updater, &policy, &param ) != 0 )
-      {
-         perror( "Failed to get scheduler parameters for system clock!" );
-      }
-      if( pthread_setschedparam( updater, SCHED_RR, &param ) != 0 )
-      {  
-         perror( "Failed to reset scheduler for system clock!" );
-      }  
    }
 
    virtual ~SystemClock()

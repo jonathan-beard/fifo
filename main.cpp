@@ -16,7 +16,7 @@ struct Data
    Data( size_t send ) : send_count(  send )
    {}
    size_t                 send_count;
-} data( 1e5 );
+} data( 1e7 );
 
 
 //#define USESharedMemory 1
@@ -119,8 +119,9 @@ std::string test()
 int 
 main( int argc, char **argv )
 {
-   RandomString<30> rs;
+   RandomString< 50 > rs;
    const std::string root( "/project/mercury/svardata/" );
+   //const std::string root( "" );
    std::ofstream ofs( root + rs.get() + ".csv" );
    if( ! ofs.is_open() )
    {
