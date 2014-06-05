@@ -144,15 +144,19 @@ namespace Monitor
    };
 }
 
-const std::array< double, Monitor::QueueData::Units::N > Monitor::QueueData::unit_conversion
- = {{ 1              /** bytes **/,
-      0.000976562    /** kilobytes **/,
-      9.53674e-7     /** megabytes **/, 
-      9.31323e-10    /** gigabytes **/,
-      9.09495e-13    /** terabytes **/ }};
+const std::array< double, 
+                  Monitor::QueueData::Units::N > 
+                  Monitor::QueueData::unit_conversion
+                      = {{ 1              /** bytes **/,
+                           0.000976562    /** kilobytes **/,
+                           9.53674e-7     /** megabytes **/, 
+                           9.31323e-10    /** gigabytes **/,
+                           9.09495e-13    /** terabytes **/ }};
 
-const std::array< std::string, Monitor::QueueData::Units::N > Monitor::QueueData::unit_prints
- = {{ "Bytes", "KB", "MB", "GB", "TB" }};
+const std::array< std::string, 
+                  Monitor::QueueData::Units::N > 
+                     Monitor::QueueData::unit_prints
+                         = {{ "Bytes", "KB", "MB", "GB", "TB" }};
 
 template < class T, 
            RingBufferType type = RingBufferType::Heap, 
@@ -184,7 +188,7 @@ template< class T,
 public:
    RingBufferBaseMonitor( const size_t n ) : 
             RingBufferBase< T, type >(),
-            monitor_data( system_clock->getResolution() * 2 , sizeof( T ) ),
+            monitor_data( system_clock->getResolution() , sizeof( T ) ),
             monitor( nullptr ),
             term( false )
    {

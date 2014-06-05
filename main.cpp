@@ -16,7 +16,7 @@ struct Data
    Data( size_t send ) : send_count(  send )
    {}
    size_t                 send_count;
-} data( 1e3 );
+} data( 1e6 );
 
 
 //#define USESharedMemory 1
@@ -39,7 +39,7 @@ void
 producer( Data &data, TheBuffer &buffer )
 {
    size_t current_count( 0 );
-   const double service_time( 100.0e-3 );
+   const double service_time( 10.0e-4 );
    while( current_count++ < data.send_count )
    {
       buffer.push_back( current_count );
@@ -54,7 +54,7 @@ void
 consumer( Data &data , TheBuffer &buffer )
 {
    size_t   current_count( 0 );
-   const double service_time( 50.0e-3 );
+   const double service_time( 5.0e-4 );
    while( true )
    {
       const auto sentinel( buffer.pop() );
@@ -128,7 +128,7 @@ main( int argc, char **argv )
       std::cerr << "Couldn't open ofstream!!\n";
       exit( EXIT_FAILURE );
    }
-   int runs( 5 );
+   int runs( 1 );
    while( runs-- )
    {
       ofs << test() << "\n";
