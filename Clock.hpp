@@ -20,7 +20,7 @@
 #ifndef _CLOCK_HPP_
 #define _CLOCK_HPP_  1
 
-typedef long double sclock_t;
+typedef double sclock_t;
 
 class Clock
 {
@@ -33,6 +33,6 @@ public:
    sclock_t getResolution();
 
 private:
-   static sclock_t   *resolution;
+   sclock_t   *resolution;
 };
 #endif /* END _CLOCK_HPP_ */

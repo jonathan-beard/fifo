@@ -37,7 +37,7 @@
 #include "SystemClock.tcc"
 
 extern Clock *system_clock;
-const double sample_freq = 1e-7;
+
 
 namespace Monitor
 {
@@ -184,7 +184,7 @@ template< class T,
 public:
    RingBufferBaseMonitor( const size_t n ) : 
             RingBufferBase< T, type >(),
-            monitor_data( sample_freq, sizeof( T ) ),
+            monitor_data( system_clock->getResolution() * 2 , sizeof( T ) ),
             monitor( nullptr ),
             term( false )
    {

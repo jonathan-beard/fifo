@@ -67,6 +67,7 @@ public:
          perror( "Failed to create timer thread, exiting." );
          exit( EXIT_FAILURE );
       }
+      while( ! thread_data.setup ); /* spin */
    }
 
    virtual ~SystemClock()
@@ -116,7 +117,8 @@ private:
 
    struct ThreadData{
       ThreadData() : clock( nullptr ),
-                     done(  false )
+                     done(  false ),
+                     setup( false )
       {
          clock = new Clock();
       }
@@ -130,6 +132,7 @@ private:
 
       Clock         *clock;
       volatile bool done;
+      volatile bool setup;
    } thread_data ;
 
    /**
@@ -349,6 +352,7 @@ private:
          }
          break;
       }
+      d->setup = true;
       while( ! done )
       {
          function( clock );
