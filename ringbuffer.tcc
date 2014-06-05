@@ -78,17 +78,17 @@ namespace Monitor
       static double get_arrival_rate( volatile QueueData &qd , 
                                       Units unit )
       {
-         return( ( (qd.items_arrived * qd.item_unit) / 
-                     (qd.sample_frequency * qd.arrived_samples ) ) * 
-                        unit_conversion[ unit ] );
+         return( ( ((double)qd.items_arrived * (double)qd.item_unit) / 
+                     ((double)qd.sample_frequency * (double)qd.arrived_samples ) ) * 
+                        (double)unit_conversion[ unit ] );
       }
 
       static double get_departure_rate( volatile QueueData &qd, 
                                         Units unit )
       {
-         return( ( (qd.items_departed * qd.item_unit) / 
-                     (qd.sample_frequency * qd.departed_samples ) ) * 
-                        unit_conversion[ unit ] );
+         return( ( ((double)qd.items_departed * (double)qd.item_unit) / 
+                     ((double)qd.sample_frequency * (double)qd.departed_samples ) ) * 
+                        (double)unit_conversion[ unit ] );
       }
 
       static double get_mean_queue_occupancy( volatile QueueData &qd ) 
