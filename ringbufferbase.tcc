@@ -35,7 +35,7 @@
  * writes or blocking for space, otherwise blocking will
  * actively spin while waiting.
  */
-#define NICE 1
+//#define NICE 1
 
 /**
  * Blocked - simple data structure to combine the send count
@@ -43,6 +43,7 @@
  * synchronization between cores.
  */
 union Blocked{
+   
    Blocked() : all( 0 )
    {}
 
@@ -50,13 +51,12 @@ union Blocked{
    {
       all = other.all;
    }
-
    struct{
-      std::uint32_t count;
-      std::uint32_t blocked;
+      std::uint64_t 
+         blocked  : 1,
+         count    : 63;
    };
-   /** added for convenience of initialization **/
-   std::uint64_t all;
+   std::uint64_t  all;
 };
 
 template < class T, 
