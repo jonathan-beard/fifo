@@ -230,16 +230,16 @@ private:
             /** begin assembly section to init previous **/
 #ifdef   __x86_64
             __asm__ volatile(
-#if __AVX__  
+#if RDTSCP  
              "\
-               lfence                           \n\
-               rdtsc                            \n\
+               rdtscp                           \n\
                shl      $32, %%rdx              \n\
                orq      %%rax, %%rdx            \n\
                movq     %%rdx, %[prev]"
 #else
              "\
-               rdtscp                           \n\
+               lfence                           \n\
+               rdtsc                            \n\
                shl      $32, %%rdx              \n\
                orq      %%rax, %%rdx            \n\
                movq     %%rdx, %[prev]"
@@ -266,18 +266,29 @@ private:
                /** begin assembly sections **/
 #ifdef   __x86_64
                uint64_t difference;
-               __asm__ volatile("\
-               xorl     %%eax , %%eax     \n\
-               xorl     %%ecx , %%ecx     \n\
-               cpuid                            \n\
+               __asm__ volatile(
+#if RDTSCP               
+               "\
+               rdtscp                           \n\
+               shl      $32, %%rdx              \n\
+               orq      %%rax, %%rdx            \n\
+               movq     %%rdx, %%rax            \n\
+               movq     %[pre], %%rcx           \n\
+               subq     %%rcx, %%rax            \n\
+               movq     %%rax, %[diff]          \n\
+               movq     %%rdx, %[prev]"
+#else
+               "\
+               lfence                           \n\
                rdtsc                            \n\
                shl      $32, %%rdx              \n\
                orq      %%rax, %%rdx            \n\
                movq     %%rdx, %%rax            \n\
-               movq     %[pre], %%rcx          \n\
+               movq     %[pre], %%rcx           \n\
                subq     %%rcx, %%rax            \n\
-               movq     %%rax, %[diff]           \n\
+               movq     %%rax, %[diff]          \n\
                movq     %%rdx, %[prev]"
+#endif
                   :
                   /*outputs here*/
                   [diff]    "=r" ( difference ),
@@ -295,10 +306,13 @@ private:
 
                clock->increment( seconds );
 #elif    __ARMEL__
+#warning Using dummy counter!!               
                clock->increment();
 #elif    __ARMHF__
+#warning Using dummy counter!!               
                clock->increment();
 #else
+#warning Using dummy counter!!               
                clock->increment();
 #endif
             };
