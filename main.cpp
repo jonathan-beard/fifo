@@ -120,15 +120,15 @@ int
 main( int argc, char **argv )
 {
    RandomString< 50 > rs;
-   const std::string root( "/project/mercury/svardata/" );
-//   const std::string root( "" );
+//   const std::string root( "/project/mercury/svardata/" );
+   const std::string root( "" );
    std::ofstream ofs( root + rs.get() + ".csv" );
    if( ! ofs.is_open() )
    {
       std::cerr << "Couldn't open ofstream!!\n";
       exit( EXIT_FAILURE );
    }
-   int runs( 10 );
+   int runs( 1 );
    while( runs-- )
    {
       ofs << test() << "\n";

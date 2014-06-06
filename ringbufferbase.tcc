@@ -156,6 +156,11 @@ public:
          {   
             write_stats.blocked = 1;
          }
+         __asm__ volatile("\
+           pause"
+           :
+           :
+           : );
       }
       const size_t write_index( Pointer::val( data->write_pt ) );
       data->store[ write_index ] = item;
@@ -217,6 +222,11 @@ public:
          {   
             read_stats.blocked  = 1;
          }
+         __asm__ volatile("\
+           pause"
+           :
+           :
+           : );
       }
       const size_t read_index( Pointer::val( data->read_pt ) );
       T output = data->store[ read_index ];
@@ -272,6 +282,11 @@ public:
 #ifdef NICE      
          std::this_thread::yield();
 #endif         
+         __asm__ volatile("\
+           pause"
+           :
+           :
+           : );
       }
       const size_t read_index( Pointer::val( data->read_pt ) );
       T &output( data->store[ read_index ] );

@@ -31,6 +31,7 @@
 #include <thread>
 #include <cstring>
 #include <cstdint>
+
 #include "ringbufferbase.tcc"
 #include "shm.hpp"
 #include "ringbuffertypes.hpp"
@@ -188,7 +189,7 @@ template< class T,
 public:
    RingBufferBaseMonitor( const size_t n ) : 
             RingBufferBase< T, type >(),
-            monitor_data( system_clock->getResolution() * 2, sizeof( T ) ),
+            monitor_data( system_clock->getResolution() , sizeof( T ) ),
             monitor( nullptr ),
             term( false )
    {
@@ -259,10 +260,13 @@ protected:
          data.total_occupancy += buffer.size();
          data.samples         += 1;
          const auto stop_time( data.sample_frequency + system_clock->getTime() );
-         while( system_clock->getTime() < stop_time )
+         while( system_clock->getTime() < stop_time  && ! term )
          {
-            if( term ) break;
-            //needs to be fairly precisely timed so no yeilding here
+            __asm__ volatile("\
+               pause"
+               :
+               :
+               : );
          }
       }
    }
