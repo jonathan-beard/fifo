@@ -42,6 +42,7 @@
 #include <sched.h>
 #endif
 
+#define sched_getcpu() \
 
 /**
  * TODO:
@@ -49,25 +50,17 @@
  * 2) Add accessor for getting SHM Key to open
  * 3) Add accessor to open SHM for new processes 
  *    to use the counter.
- * 4) Assess the resolution of the mach time methods
+ * 4) Fix the latency issue (time for system calls and assembly code 
  */
 
 enum ClockType  { Dummy, Cycle, System };
 
 template < ClockType T > class SystemClock : public Clock {
 public:
-   SystemClock() : updater( 0 )
+   SystemClock( int core  = 0) : updater( 0 )
    {
-      errno = 0;
-      if( pthread_create( &updater, 
-                          nullptr, 
-                          updateClock, 
-                          (void*) &thread_data ) != 0 )
-      {
-         perror( "Failed to create timer thread, exiting." );
-         exit( EXIT_FAILURE );
-      }
-      while( ! thread_data.setup ); /* spin */
+      thread_data.core = core;
+      init();
    }
 
    virtual ~SystemClock()
@@ -85,6 +78,21 @@ public:
 
 
 private:
+
+   void init()
+   {
+      errno = 0;
+      if( pthread_create( &updater, 
+                          nullptr, 
+                          updateClock, 
+                          (void*) &thread_data ) != 0 )
+      {
+         perror( "Failed to create timer thread, exiting." );
+         exit( EXIT_FAILURE );
+      }
+      while( ! thread_data.setup ); /* spin */
+   }
+
    class Clock {
    public:
       Clock() : a( (sclock_t) 0 ),
@@ -118,7 +126,8 @@ private:
    struct ThreadData{
       ThreadData() : clock( nullptr ),
                      done(  false ),
-                     setup( false )
+                     setup( false ),
+                     core( 0 )
       {
          clock = new Clock();
       }
@@ -133,6 +142,7 @@ private:
       Clock         *clock;
       volatile bool done;
       volatile bool setup;
+      int           core;
    } thread_data ;
 
    /**
@@ -199,13 +209,11 @@ private:
 #else
             cpu_allocate_size = sizeof( cpu_set_t );
             cpuset = (cpu_set_t*) malloc( cpu_allocate_size );
-            //TODO maybe shouldn't be an assert, but more graceful
             assert( cpuset != nullptr );
             CPU_ZERO( cpuset );
 #endif
             /** TODO, make configurable **/
-            const uint32_t assigned_processor( 0 );
-            CPU_SET( assigned_processor,
+            CPU_SET( d->core,
                      cpuset );
             errno = 0;
             if( sched_setaffinity( 0 /* calling thread */,
@@ -215,17 +223,27 @@ private:
                perror( "Failed to set affinity for cycle counter!!" );
                exit( EXIT_FAILURE );
             }
+            /** wait till we know we're on the right processor **/
+            pthread_yield();
+            /** get to the timing, previous is captured by the lambda function **/
             uint64_t previous( 0 );
             /** begin assembly section to init previous **/
 #ifdef   __x86_64
-            __asm__ volatile("\
-               xorl     %%eax , %%eax     \n\
-               xorl     %%ecx , %%ecx     \n\
-               cpuid                            \n\
+            __asm__ volatile(
+#if __AVX__  
+             "\
+               lfence                           \n\
                rdtsc                            \n\
                shl      $32, %%rdx              \n\
                orq      %%rax, %%rdx            \n\
                movq     %%rdx, %[prev]"
+#else
+             "\
+               rdtscp                           \n\
+               shl      $32, %%rdx              \n\
+               orq      %%rax, %%rdx            \n\
+               movq     %%rdx, %[prev]"
+#endif
                :
                /*outputs here*/
                [prev]    "=r" (previous)
@@ -271,21 +289,22 @@ private:
                   /*clobbered registers*/
                   "rax","eax","rcx","ecx","rdx"
                );
-#elif    __ARMEL__
-#warning    Cycle counter not supported on this architecture
-#elif    __ARMHF__
-#warning    Cycle counter not supported on this architecture
-#else
-#warning    Cycle counter not supported on this architecture
-#endif
                /* convert to seconds for increment */
                const sclock_t seconds( (sclock_t) difference / 
                                        (sclock_t) frequency );
 
                clock->increment( seconds );
+#elif    __ARMEL__
+               clock->increment();
+#elif    __ARMHF__
+               clock->increment();
+#else
+               clock->increment();
+#endif
             };
 #else
 #warning    Cycle counter currently supported for Linux only
+            function = []( Clock *clock ){ clock->increment(); };
 #endif
          }
          break;
@@ -318,10 +337,8 @@ private:
                clock->increment( seconds );
             };
 #elif defined __APPLE__
-            uint64_t  current( 0 );
-            uint64_t  previous( 0 );
+            uint64_t  previous( mach_absolute_time() );
             /** init **/
-            previous = mach_absolute_time();
             static mach_timebase_info_data_t sTimebaseInfo;
             if( sTimebaseInfo.denom == 0 )
             {
@@ -329,8 +346,8 @@ private:
             }
             function = [&]( Clock *clock )
             {
-               current = mach_absolute_time();
-               const uint64_t diff( current - previous );
+               const auto current( mach_absolute_time() );
+               const auto diff( current - previous );
                previous = current;
                /** 
                 * TODO, fix this, there's gotta be a better way

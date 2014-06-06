@@ -32,7 +32,7 @@ typedef RingBuffer< int64_t /* buffer type */,
 #endif
 
 
-Clock *system_clock = new SystemClock< System >;
+Clock *system_clock = new SystemClock< Cycle >;
 
 
 void
@@ -120,15 +120,15 @@ int
 main( int argc, char **argv )
 {
    RandomString< 50 > rs;
-//   const std::string root( "/project/mercury/svardata/" );
-   const std::string root( "" );
+   const std::string root( "/project/mercury/svardata/" );
+//   const std::string root( "" );
    std::ofstream ofs( root + rs.get() + ".csv" );
    if( ! ofs.is_open() )
    {
       std::cerr << "Couldn't open ofstream!!\n";
       exit( EXIT_FAILURE );
    }
-   int runs( 1 );
+   int runs( 10 );
    while( runs-- )
    {
       ofs << test() << "\n";
