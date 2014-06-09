@@ -191,7 +191,7 @@ template< class T,
 public:
    RingBufferBaseMonitor( const size_t n ) : 
             RingBufferBase< T, type >(),
-            monitor_data( system_clock->getResolution() * 2 , sizeof( T ) ),
+            monitor_data( system_clock->getResolution() , sizeof( T ) ),
             monitor( nullptr ),
             term( false )
    {
