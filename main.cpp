@@ -32,7 +32,7 @@ typedef RingBuffer< int64_t /* buffer type */,
 #endif
 
 
-Clock *system_clock = new SystemClock< Cycle >( 1 );
+Clock *system_clock = new SystemClock< System >( 1 );
 
 
 void
@@ -109,7 +109,6 @@ std::string test()
 #endif
    a.join();
    b.join();
-   buffer.monitor_off();
    auto &monitor_data( buffer.getQueueData() );
    std::stringstream ss;
    Monitor::QueueData::print( monitor_data, Monitor::QueueData::MB, ss, true);
@@ -129,7 +128,7 @@ main( int argc, char **argv )
       std::cerr << "Couldn't open ofstream!!\n";
       exit( EXIT_FAILURE );
    }
-   int runs( 5 );
+   int runs( 10 );
    while( runs-- )
    {
        ofs << test() << "\n";

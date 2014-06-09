@@ -253,6 +253,11 @@ protected:
                arrival_started = true;
             }
          }
+         /**
+          * if we're not blocked, and the server has actually started
+          * and the end of data signal has not been received then 
+          * record the throughput within this frame
+          */
          if( ! write_copy.blocked && arrival_started  && ! (buffer.signal_mask & 1 ) )
          {
             data.items_arrived += write_copy.count;
@@ -268,7 +273,12 @@ protected:
                server_started = true;
             }
          }
-         if( ! read_copy.blocked && server_started )
+         /**
+          * if we're not blocked, and the server has actually started
+          * and the end of data signal has not been received then 
+          * record the throughput within this frame
+          */
+         if( ! read_copy.blocked && server_started  && ! ( buffer.signal_mask & 1 ) )
          {
             data.items_departed += read_copy.count;
             data.departed_samples++;
