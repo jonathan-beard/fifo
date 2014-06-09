@@ -120,8 +120,8 @@ int
 main( int argc, char **argv )
 {
    RandomString< 50 > rs;
-   const std::string root( "/project/mercury/svardata/longer_" );
-   //const std::string root( "" );
+   //const std::string root( "/project/mercury/svardata/longer_" );
+   const std::string root( "" );
    std::ofstream ofs( root + rs.get() + ".csv" );
    if( ! ofs.is_open() )
    {
