@@ -42,7 +42,6 @@
 #include <sched.h>
 #endif
 
-#define sched_getcpu() \
 
 /**
  * TODO:

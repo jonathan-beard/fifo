@@ -134,14 +134,14 @@ namespace Monitor
          return( stream );
       }
 
-      uint64_t    items_arrived;
-      uint64_t    arrived_samples;
-      uint64_t    items_departed;
-      uint64_t    departed_samples;
-      uint64_t    total_occupancy;
+      uint64_t          items_arrived;
+      uint64_t          arrived_samples;
+      uint64_t          items_departed;
+      uint64_t          departed_samples;
+      uint64_t          total_occupancy;
       const size_t      item_unit;
-      uint64_t    samples;
-      const double sample_frequency;
+      uint64_t          samples;
+      const double      sample_frequency;
    };
 }
 
@@ -189,7 +189,7 @@ template< class T,
 public:
    RingBufferBaseMonitor( const size_t n ) : 
             RingBufferBase< T, type >(),
-            monitor_data( system_clock->getResolution() , sizeof( T ) ),
+            monitor_data( system_clock->getResolution(), sizeof( T ) ),
             monitor( nullptr ),
             term( false )
    {

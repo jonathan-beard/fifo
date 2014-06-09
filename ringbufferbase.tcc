@@ -35,7 +35,7 @@
  * writes or blocking for space, otherwise blocking will
  * actively spin while waiting.
  */
-//#define NICE 1
+#define NICE 1
 
 /**
  * Blocked - simple data structure to combine the send count
@@ -53,8 +53,8 @@ union Blocked{
    }
    struct{
       std::uint64_t 
-         blocked  : 1,
-         count    : 63;
+         count    : 63,
+         blocked  : 1;
    };
    std::uint64_t  all;
 };
@@ -156,16 +156,18 @@ public:
          {   
             write_stats.blocked = 1;
          }
+#if( 0 ) 
          __asm__ volatile("\
            pause"
            :
            :
            : );
+#endif           
       }
       const size_t write_index( Pointer::val( data->write_pt ) );
       data->store[ write_index ] = item;
       Pointer::inc( data->write_pt );
-      write_stats.count++;
+      write_stats.all++;
    }
    
    /**
@@ -198,7 +200,7 @@ public:
             const size_t write_index( Pointer::val( data->write_pt ) );
             data->store[ write_index ] = (*begin);
             Pointer::inc( data->write_pt );
-            write_stats.count++;
+            write_stats.all++;
             begin++;
          }
       }
@@ -222,16 +224,18 @@ public:
          {   
             read_stats.blocked  = 1;
          }
+#if( 0 ) 
          __asm__ volatile("\
            pause"
            :
            :
            : );
+#endif           
       }
       const size_t read_index( Pointer::val( data->read_pt ) );
       T output = data->store[ read_index ];
       Pointer::inc( data->read_pt );
-      read_stats.count++;
+      read_stats.all++;
       return( output );
    }
 
@@ -281,12 +285,14 @@ public:
       {
 #ifdef NICE      
          std::this_thread::yield();
-#endif         
+#endif     
+#if( 0 )         
          __asm__ volatile("\
            pause"
            :
            :
            : );
+#endif
       }
       const size_t read_index( Pointer::val( data->read_pt ) );
       T &output( data->store[ read_index ] );
