@@ -31,6 +31,8 @@
 #include <thread>
 #include <cstring>
 #include <cstdint>
+#include <vector>
+#include <iostream>
 
 #include "ringbufferbase.tcc"
 #include "shm.hpp"
@@ -189,7 +191,7 @@ template< class T,
 public:
    RingBufferBaseMonitor( const size_t n ) : 
             RingBufferBase< T, type >(),
-            monitor_data( system_clock->getResolution(), sizeof( T ) ),
+            monitor_data( 1e-7 , sizeof( T ) ),
             monitor( nullptr ),
             term( false )
    {
@@ -238,12 +240,20 @@ protected:
                                volatile bool          &term,
                                volatile Monitor::QueueData     &data )
    {
-      
+      bool arrival_started( false );
+      bool server_started( false );
       while( ! term )
       {
          const Blocked write_copy( buffer.write_stats );
          buffer.write_stats.all = 0;
-         if( ! write_copy.blocked  )
+         if( ! arrival_started )
+         {
+            if( write_copy.count > 0 )
+            {
+               arrival_started = true;
+            }
+         }
+         if( ! write_copy.blocked && arrival_started  && ! (buffer.signal_mask & 1 ) )
          {
             data.items_arrived += write_copy.count;
             data.arrived_samples++;
@@ -251,7 +261,14 @@ protected:
 
          const Blocked read_copy( buffer.read_stats );
          buffer.read_stats.all = 0;
-         if( ! read_copy.blocked )
+         if( ! server_started )
+         {
+            if( write_copy.count > 0 )
+            {
+               server_started = true;
+            }
+         }
+         if( ! read_copy.blocked && server_started )
          {
             data.items_departed += read_copy.count;
             data.departed_samples++;

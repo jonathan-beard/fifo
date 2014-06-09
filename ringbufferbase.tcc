@@ -35,7 +35,7 @@
  * writes or blocking for space, otherwise blocking will
  * actively spin while waiting.
  */
-#define NICE 1
+//#define NICE 1
 
 /**
  * Blocked - simple data structure to combine the send count
@@ -66,7 +66,8 @@ public:
     * RingBuffer - default constructor, initializes basic
     * data structures.
     */
-   RingBufferBase() : data( nullptr )
+   RingBufferBase() : data( nullptr ),
+                      signal_mask( 0 )
    {
    }
    
@@ -118,6 +119,11 @@ public:
       }
       return( 0 );
    }
+
+   void  send_signal( const uint64_t sig )
+   {
+      signal_mask = sig;
+   }
    
    /**
     * space_avail - returns the amount of space currently
@@ -156,7 +162,7 @@ public:
          {   
             write_stats.blocked = 1;
          }
-#if( 0 ) 
+#if __x86_64 
          __asm__ volatile("\
            pause"
            :
@@ -224,7 +230,7 @@ public:
          {   
             read_stats.blocked  = 1;
          }
-#if( 0 ) 
+#if __x86_64 
          __asm__ volatile("\
            pause"
            :
@@ -286,7 +292,7 @@ public:
 #ifdef NICE      
          std::this_thread::yield();
 #endif     
-#if( 0 )         
+#if   __x86_64        
          __asm__ volatile("\
            pause"
            :
@@ -316,6 +322,7 @@ protected:
    Buffer::Data< T, type>      *data;
    volatile Blocked                             read_stats;
    volatile Blocked                             write_stats;
+   uint64_t signal_mask;
 };
 
 
@@ -329,7 +336,8 @@ public:
     * RingBuffer - default constructor, initializes basic
     * data structures.
     */
-   RingBufferBase() : data( nullptr )
+   RingBufferBase() : data( nullptr ),
+                        signal_mask( 0 )
    {
    }
    
@@ -348,6 +356,10 @@ public:
       return( 0 );
    }
    
+   void  send_signal( const uint64_t sig )
+   {
+      signal_mask = sig;
+   }
    /**
     * space_avail - returns the amount of space currently
     * available in the queue.  This is the amount a user
@@ -445,5 +457,6 @@ protected:
    Buffer::Data< T, RingBufferType::Heap >      *data;
    volatile Blocked                             read_stats;
    volatile Blocked                             write_stats;
+   uint64_t signal_mask;
 };
 #endif /* END _RINGBUFFERBASE_TCC_ */
