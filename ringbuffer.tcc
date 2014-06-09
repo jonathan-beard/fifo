@@ -262,11 +262,13 @@ protected:
          const auto stop_time( data.sample_frequency + system_clock->getTime() );
          while( system_clock->getTime() < stop_time  && ! term )
          {
+#if __x86_64         
             __asm__ volatile("\
                pause"
                :
                :
                : );
+#endif               
          }
       }
    }
