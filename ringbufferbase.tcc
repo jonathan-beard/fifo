@@ -37,6 +37,9 @@
  */
 //#define NICE 1
 
+typedef std::uint32_t blocked_part_t;
+typedef std::uint64_t blocked_whole_t;
+
 /**
  * Blocked - simple data structure to combine the send count
  * and blocked flag in one simple structure.  Greatly improves
@@ -51,13 +54,13 @@ union Blocked{
    {
       all = other.all;
    }
+
    struct{
-      std::uint64_t 
-         count    : 63,
-         blocked  : 1;
+      blocked_part_t  count;
+      blocked_part_t  blocked;
    };
-   std::uint64_t  all;
-};
+   blocked_whole_t    all;
+} __attribute__ ((aligned( 8 )));
 
 template < class T, 
            RingBufferType type > class RingBufferBase {
@@ -368,7 +371,7 @@ public:
     */
     size_t   space_avail()
    {
-      return( data->max_cap - size() );
+      return( data->max_cap );
    }
   
    /**

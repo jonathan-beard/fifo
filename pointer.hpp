@@ -73,8 +73,8 @@ public:
    static size_t wrapIndicator( Pointer &ptr );
    
 private:
-   volatile size_t           a;
-   volatile size_t           b;
+   volatile std::uint64_t           a;
+   volatile std::uint64_t           b;
    /**
     * size of wrap pointer might become an issue
     * if GHz increase drastically or if this runs

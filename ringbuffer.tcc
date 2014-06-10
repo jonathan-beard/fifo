@@ -191,7 +191,7 @@ template< class T,
 public:
    RingBufferBaseMonitor( const size_t n ) : 
             RingBufferBase< T, type >(),
-            monitor_data( 1e-7, sizeof( T ) ),
+            monitor_data( 1e-7 , sizeof( T ) ),
             monitor( nullptr ),
             term( false )
    {
@@ -258,7 +258,9 @@ protected:
           * and the end of data signal has not been received then 
           * record the throughput within this frame
           */
-         if( ! write_copy.blocked && arrival_started  && ! (buffer.signal_mask & 1 ) )
+         if( ! write_copy.blocked && 
+               arrival_started  && 
+             ! (buffer.signal_mask & 1 ) )
          {
             data.items_arrived += write_copy.count;
             data.arrived_samples++;
@@ -278,7 +280,9 @@ protected:
           * and the end of data signal has not been received then 
           * record the throughput within this frame
           */
-         if( ! read_copy.blocked && server_started  && ! ( buffer.signal_mask & 1 ) )
+         if( ! read_copy.blocked && 
+               server_started  && 
+             ! ( buffer.signal_mask & 1 ) )
          {
             data.items_departed += read_copy.count;
             data.departed_samples++;

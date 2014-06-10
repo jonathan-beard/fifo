@@ -238,9 +238,22 @@ private:
                shl      $32, %%rdx              \n\
                orq      %%rax, %%rdx            \n\
                movq     %%rdx, %[prev]"
-#else
+#elif INTEL
+             "\
+               mfence                           \n\
+               rdtsc                            \n\
+               shl      $32, %%rdx              \n\
+               orq      %%rax, %%rdx            \n\
+               movq     %%rdx, %[prev]"
+#elif AMD
              "\
                lfence                           \n\
+               rdtsc                            \n\
+               shl      $32, %%rdx              \n\
+               orq      %%rax, %%rdx            \n\
+               movq     %%rdx, %[prev]"
+#elif NOSERIAL
+             "\
                rdtsc                            \n\
                shl      $32, %%rdx              \n\
                orq      %%rax, %%rdx            \n\
@@ -279,9 +292,31 @@ private:
                subq     %%rcx, %%rax            \n\
                movq     %%rax, %[diff]          \n\
                movq     %%rdx, %[prev]"
-#else
+#elif AMD
+               "\
+               mfence                           \n\
+               rdtsc                            \n\
+               shl      $32, %%rdx              \n\
+               orq      %%rax, %%rdx            \n\
+               movq     %%rdx, %%rax            \n\
+               movq     %[pre], %%rcx           \n\
+               subq     %%rcx, %%rax            \n\
+               movq     %%rax, %[diff]          \n\
+               movq     %%rdx, %[prev]"
+
+#elif INTEL
                "\
                lfence                           \n\
+               rdtsc                            \n\
+               shl      $32, %%rdx              \n\
+               orq      %%rax, %%rdx            \n\
+               movq     %%rdx, %%rax            \n\
+               movq     %[pre], %%rcx           \n\
+               subq     %%rcx, %%rax            \n\
+               movq     %%rax, %[diff]          \n\
+               movq     %%rdx, %[prev]"
+#elif NOSERIAL
+               "\
                rdtsc                            \n\
                shl      $32, %%rdx              \n\
                orq      %%rax, %%rdx            \n\

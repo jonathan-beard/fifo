@@ -21,7 +21,7 @@ struct Data
 
 //#define USESharedMemory 1
 #define USELOCAL 1
-#define BUFFSIZE 10000
+#define BUFFSIZE 1000
 
 #ifdef USESharedMemory
 typedef RingBuffer< int64_t, RingBufferType::SharedMemory, BUFFSIZE > TheBuffer;
@@ -39,7 +39,7 @@ void
 producer( Data &data, TheBuffer &buffer )
 {
    size_t current_count( 0 );
-   const double service_time( 10.0e-6 );
+   const double service_time( 100.0e-6 );
    while( current_count++ < data.send_count )
    {
       buffer.push_back( current_count );
@@ -55,7 +55,7 @@ void
 consumer( Data &data , TheBuffer &buffer )
 {
    size_t   current_count( 0 );
-   const double service_time( 5.0e-6 );
+   const double service_time( 70.0e-6 );
    while( true )
    {
       const auto sentinel( buffer.pop() );
@@ -111,7 +111,7 @@ std::string test()
    b.join();
    auto &monitor_data( buffer.getQueueData() );
    std::stringstream ss;
-   Monitor::QueueData::print( monitor_data, Monitor::QueueData::MB, ss, true);
+   Monitor::QueueData::print( monitor_data, Monitor::QueueData::Bytes, ss, true);
    return( ss.str() );
 }
 
