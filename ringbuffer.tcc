@@ -82,7 +82,7 @@ namespace Monitor
                                       Units unit )
       {
          return( ( ((double)qd.items_arrived * (double)qd.item_unit) / 
-                     ((double)qd.sample_frequency * (double)qd.arrived_samples ) ) * 
+                     (qd.sample_frequency * (double)qd.arrived_samples ) ) * 
                         (double)unit_conversion[ unit ] );
       }
 
@@ -90,7 +90,8 @@ namespace Monitor
                                         Units unit )
       {
          return( ( ((double)qd.items_departed * (double)qd.item_unit) / 
-                     ((double)qd.sample_frequency * (double)qd.departed_samples ) ) * 
+                     (
+                     qd.sample_frequency * (double)qd.departed_samples ) ) * 
                         (double)unit_conversion[ unit ] );
       }
 
@@ -144,6 +145,7 @@ namespace Monitor
       const size_t      item_unit;
       uint64_t          samples;
       const double      sample_frequency;
+      double            sample_time;
    };
 }
 
@@ -191,7 +193,7 @@ template< class T,
 public:
    RingBufferBaseMonitor( const size_t n ) : 
             RingBufferBase< T, type >(),
-            monitor_data( 1e-7 , sizeof( T ) ),
+            monitor_data( 5e-6 , sizeof( T ) ),
             monitor( nullptr ),
             term( false )
    {
@@ -241,16 +243,20 @@ protected:
                                volatile Monitor::QueueData     &data )
    {
       bool arrival_started( false );
-      bool server_started( false );
       while( ! term )
       {
+         const Blocked read_copy( buffer.read_stats );
          const Blocked write_copy( buffer.write_stats );
+         buffer.read_stats.all = 0;
          buffer.write_stats.all = 0;
+         const auto stop_time( data.sample_frequency + system_clock->getTime() );
          if( ! arrival_started )
          {
-            if( write_copy.count > 0 )
+            if( write_copy.count != 0 )
             {
                arrival_started = true;
+               std::this_thread::yield();
+               continue;
             }
          }
          /**
@@ -258,42 +264,32 @@ protected:
           * and the end of data signal has not been received then 
           * record the throughput within this frame
           */
-         if( ! write_copy.blocked && 
+         if( write_copy.blocked == 0 && 
                arrival_started  && 
              ! (buffer.signal_mask & 1 ) )
          {
             data.items_arrived += write_copy.count;
             data.arrived_samples++;
          }
-
-         const Blocked read_copy( buffer.read_stats );
-         buffer.read_stats.all = 0;
-         if( ! server_started )
-         {
-            if( write_copy.count > 0 )
-            {
-               server_started = true;
-            }
-         }
+         
          /**
           * if we're not blocked, and the server has actually started
           * and the end of data signal has not been received then 
           * record the throughput within this frame
           */
-         if( ! read_copy.blocked && 
-               server_started  && 
+         if( read_copy.blocked == 0 && 
              ! ( buffer.signal_mask & 1 ) )
          {
             data.items_departed += read_copy.count;
             data.departed_samples++;
          }
+
          
          data.total_occupancy += buffer.size();
          data.samples         += 1;
-         const auto stop_time( data.sample_frequency + system_clock->getTime() );
          while( system_clock->getTime() < stop_time  && ! term )
          {
-#if __x86_64         
+#if __x86_64            
             __asm__ volatile("\
                pause"
                :

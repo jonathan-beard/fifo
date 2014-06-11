@@ -16,18 +16,18 @@ struct Data
    Data( size_t send ) : send_count(  send )
    {}
    size_t                 send_count;
-} data( 1e6 );
+} data( 1e5 );
 
 
 //#define USESharedMemory 1
 #define USELOCAL 1
-#define BUFFSIZE 1000
+#define BUFFSIZE 1000000
 
 #ifdef USESharedMemory
 typedef RingBuffer< int64_t, RingBufferType::SharedMemory, BUFFSIZE > TheBuffer;
 #elif defined USELOCAL
 typedef RingBuffer< int64_t /* buffer type */,
-                    RingBufferType::Heap/* allocation type */,
+                    RingBufferType::Heap /* allocation type */,
                     true /* turn on monitoring */ >  TheBuffer;
 #endif
 
@@ -119,19 +119,19 @@ std::string test()
 int 
 main( int argc, char **argv )
 {
-   RandomString< 50 > rs;
-   const std::string root( "/project/mercury/svardata/longer_" );
+   //RandomString< 50 > rs;
+   //const std::string root( "/project/mercury/svardata/" );
    //const std::string root( "" );
-   std::ofstream ofs( root + rs.get() + ".csv" );
-   if( ! ofs.is_open() )
-   {
-      std::cerr << "Couldn't open ofstream!!\n";
-      exit( EXIT_FAILURE );
-   }
+   //std::ofstream ofs( root + rs.get() + ".csv" );
+   //if( ! ofs.is_open() )
+   //{
+   //   std::cerr << "Couldn't open ofstream!!\n";
+   //   exit( EXIT_FAILURE );
+   //}
    int runs( 10 );
    while( runs-- )
    {
-       ofs << test() << "\n";
+       std::cout << test() << "\n";
    }
-   ofs.close();
+   //ofs.close();
 }
