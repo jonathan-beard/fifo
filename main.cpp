@@ -16,7 +16,7 @@ struct Data
    Data( size_t send ) : send_count(  send )
    {}
    size_t                 send_count;
-} data( 1e5 );
+} data( 1e6 );
 
 
 //#define USESharedMemory 1
@@ -55,7 +55,7 @@ void
 consumer( Data &data , TheBuffer &buffer )
 {
    size_t   current_count( 0 );
-   const double service_time( 70.0e-6 );
+   const double service_time( 50.0e-6 );
    while( true )
    {
       const auto sentinel( buffer.pop() );
