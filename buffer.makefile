@@ -1,7 +1,8 @@
-RINGBUFFERDIR = $(shell echo ~/)GIT_RPO/simpleringbuffer 
+RINGBUFFERDIR = $(shell echo ~/)/GIT_RPO/simpleringbuffer/ 
 
-RINGBUFFERCFILESRAW   = getrandom 
-RINGBUFFERCPPFILESRAW = pointer shm Clock
+RBCFILES   = getrandom 
+RBCXXFILES = pointer shm Clock
 
-RINGBUFFERCFILES = $(addprefix $(RINGBUFFERDIR), RINGBUFFERCFILESRAW)
-RINGBUFFERCPPFILES = $(addprefix $(RINGBUFFERDIR), RINGBUFFERCPPFILESRAW)
+
+RBCOBJS		= $(addprefix ../../simpleringbuffer/, $(RBCFILES))
+RBCXXOBJS	= $(addprefix ../../simpleringbuffer/, $(RBCXXFILES))
