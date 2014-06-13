@@ -16,12 +16,12 @@ struct Data
    Data( size_t send ) : send_count(  send )
    {}
    size_t                 send_count;
-} data( 1e6 );
+} data( 1e1 );
 
 
 //#define USESharedMemory 1
 #define USELOCAL 1
-#define BUFFSIZE 1000000
+#define BUFFSIZE 10000
 
 #ifdef USESharedMemory
 typedef RingBuffer< int64_t, RingBufferType::SharedMemory, BUFFSIZE > TheBuffer;
@@ -39,14 +39,13 @@ void
 producer( Data &data, TheBuffer &buffer )
 {
    size_t current_count( 0 );
-   const double service_time( 100.0e-6 );
+   const double service_time( 10.0e-6 );
    while( current_count++ < data.send_count )
    {
       buffer.push_back( current_count );
       const auto stop_time( system_clock->getTime() + service_time );
       while( system_clock->getTime() < stop_time );
    }
-   buffer.push_back( -1 );
    buffer.send_signal( 1 );
    return;
 }
@@ -55,18 +54,14 @@ void
 consumer( Data &data , TheBuffer &buffer )
 {
    size_t   current_count( 0 );
-   const double service_time( 50.0e-6 );
-   while( true )
+   const double service_time( 1.0e-6 );
+   while( buffer.get_signal() != 1 )
    {
-      const auto sentinel( buffer.pop() );
-      if( sentinel == -1 )
-      {
-         break;
-      }
-      current_count++;
+      current_count = buffer.pop();
       const auto stop_time( system_clock->getTime() + service_time );
       while( system_clock->getTime() < stop_time );
    }
+   std::cerr << "count: " << current_count << "\n";
    return;
 }
 
@@ -128,7 +123,7 @@ main( int argc, char **argv )
    //   std::cerr << "Couldn't open ofstream!!\n";
    //   exit( EXIT_FAILURE );
    //}
-   int runs( 10 );
+   int runs( 1 );
    while( runs-- )
    {
        std::cout << test() << "\n";

@@ -33,6 +33,7 @@
 #include <cstdint>
 #include <vector>
 #include <iostream>
+#include <fstream>
 
 #include "ringbufferbase.tcc"
 #include "shm.hpp"
@@ -243,6 +244,7 @@ protected:
                                volatile Monitor::QueueData     &data )
    {
       bool arrival_started( false );
+//      std::vector< std::uint32_t > departure_log;
       while( ! term )
       {
          const Blocked read_copy( buffer.read_stats );
@@ -265,8 +267,7 @@ protected:
           * record the throughput within this frame
           */
          if( write_copy.blocked == 0 && 
-               arrival_started  && 
-             ! (buffer.signal_mask & 1 ) )
+               arrival_started  && buffer.signal_mask.sig == 0 )
          {
             data.items_arrived += write_copy.count;
             data.arrived_samples++;
@@ -277,11 +278,11 @@ protected:
           * and the end of data signal has not been received then 
           * record the throughput within this frame
           */
-         if( read_copy.blocked == 0 && 
-             ! ( buffer.signal_mask & 1 ) )
+         if( read_copy.blocked == 0 )
          {
             data.items_departed += read_copy.count;
             data.departed_samples++;
+//            departure_log.push_back( read_copy.count );
          }
 
          
@@ -298,6 +299,17 @@ protected:
 #endif               
          }
       }
+//      std::ofstream ofs( "outputlog.csv" );
+//      if( ! ofs.is_open() )
+//      {
+//         std::cerr << "Couldn't open log!!\n";
+//         exit( EXIT_FAILURE );
+//      }
+//      for( std::uint32_t val : departure_log )
+//      {
+//         ofs << val << "\n";
+//      }
+//      ofs.close();
    }
    
    volatile Monitor::QueueData monitor_data;

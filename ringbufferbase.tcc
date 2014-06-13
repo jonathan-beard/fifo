@@ -35,7 +35,7 @@
  * writes or blocking for space, otherwise blocking will
  * actively spin while waiting.
  */
-//#define NICE 1
+#define NICE 1
 
 typedef std::uint32_t blocked_part_t;
 typedef std::uint64_t blocked_whole_t;
@@ -69,8 +69,7 @@ public:
     * RingBuffer - default constructor, initializes basic
     * data structures.
     */
-   RingBufferBase() : data( nullptr ),
-                      signal_mask( 0 )
+   RingBufferBase() : data( nullptr )
    {
    }
    
@@ -125,7 +124,24 @@ public:
 
    void  send_signal( const uint64_t sig )
    {
-      signal_mask = sig;
+      const size_t write_index( Pointer::val( data->write_pt ) );
+      signal_mask.avail = true;
+      signal_mask.index = write_index;
+      signal_mask.sig   = sig;
+      std::cerr << "send_signal called\n";
+   }
+   
+   std::uint64_t get_signal()
+   {
+      const size_t read_index( Pointer::val( data->read_pt ) );
+      std::cerr << signal_mask.index << " - " << read_index << "\n";
+      if( signal_mask.avail && signal_mask.index == read_index )
+      {
+         std::cerr << "signal received\n";
+         return( signal_mask.sig );
+      }
+      /** else **/
+      return( 0 );
    }
    
    /**
@@ -325,7 +341,18 @@ protected:
    Buffer::Data< T, type>      *data;
    volatile Blocked                             read_stats;
    volatile Blocked                             write_stats;
-   uint64_t signal_mask;
+   volatile struct SignalMask
+   {
+      SignalMask() : avail( false ),
+                     index( 0 ),
+                     sig( 0 )
+      {
+      }
+      
+      bool     avail;
+      size_t   index;
+      uint64_t sig;
+   }signal_mask;
 };
 
 
@@ -339,8 +366,7 @@ public:
     * RingBuffer - default constructor, initializes basic
     * data structures.
     */
-   RingBufferBase() : data( nullptr ),
-                        signal_mask( 0 )
+   RingBufferBase() : data( nullptr )
    {
    }
    
@@ -361,8 +387,17 @@ public:
    
    void  send_signal( const uint64_t sig )
    {
-      signal_mask = sig;
+      /** get mem address of current read pointer **/
+      signal_mask.avail = true;
+      signal_mask.index = 0;
+      signal_mask.sig  = sig;
    }
+
+   std::uint64_t get_signal() 
+   {
+      return( signal_mask.sig );
+   }
+
    /**
     * space_avail - returns the amount of space currently
     * available in the queue.  This is the amount a user
@@ -460,6 +495,17 @@ protected:
    Buffer::Data< T, RingBufferType::Heap >      *data;
    volatile Blocked                             read_stats;
    volatile Blocked                             write_stats;
-   uint64_t signal_mask;
+   volatile struct SignalMask
+   {
+      SignalMask() : avail( false ),
+                     index( 0 ),
+                     sig( 0 )
+      {
+      }
+      
+      bool     avail;
+      size_t   index;
+      uint64_t sig;
+   }signal_mask;
 };
 #endif /* END _RINGBUFFERBASE_TCC_ */
