@@ -28,6 +28,7 @@
 #include "pointer.hpp"
 #include "ringbuffertypes.hpp"
 #include "bufferdata.tcc"
+#include "signalvars.hpp"
 
 /**
  * Note: there is a NICE define that can be uncommented
@@ -154,11 +155,11 @@ public:
    }
 
    /**
-    * push_back - writes a single item to the queue, blocks
+    * push- writes a single item to the queue, blocks
     * until there is enough space.
     * @param   item, T
     */
-   void  push_back( Element< T > &item )
+   void  push( T &item, const RBSignal signal = RBSignal::RBNONE )
    {
       while( space_avail() == 0 )
       {
@@ -178,7 +179,8 @@ public:
 #endif           
       }
       const size_t write_index( Pointer::val( data->write_pt ) );
-      data->store[ write_index ].item = item;
+      data->store[ write_index ].item     = item;
+      data->store[ write_index ].signal   = signal;
       Pointer::inc( data->write_pt );
       write_stats.all++;
    }
@@ -194,7 +196,9 @@ public:
     * @param   end   - iterator_type, iterator to end of range
     */
    template< class iterator_type >
-   void insert( iterator_type begin, iterator_type end )
+   void insert(   iterator_type begin, 
+                  iterator_type end, 
+                  const RBSignal signal = RBSignal::RBNONE )
    {
       while( begin != end )
       {
@@ -212,6 +216,15 @@ public:
          {
             const size_t write_index( Pointer::val( data->write_pt ) );
             data->store[ write_index ].item = (*begin);
+            /** add signal to last el only **/
+            if( begin == ( end - 1 ) )
+            {
+               data->store[ write_index ].signal = signal;
+            }
+            else
+            {
+               data->store[ write_index ].signal = RBSignal::RBNONE;
+            }
             Pointer::inc( data->write_pt );
             write_stats.all++;
             begin++;
@@ -246,7 +259,7 @@ public:
 #endif           
       }
       const size_t read_index( Pointer::val( data->read_pt ) );
-      Element< T > output = data->store[ read_index ];
+      Buffer::Element< T > output = data->store[ read_index ];
       signal_mask = output.signal;
       Pointer::inc( data->read_pt );
       read_stats.all++;
@@ -278,10 +291,12 @@ public:
       for( size_t i( 0 ); i < N; i++ )
       {
          const size_t read_index( Pointer::val( data->read_pt ) );
-         (*output)[ i ] = data->store[ read_index ];
+         (*output)[ i ] = data->store[ read_index ].item;
          Pointer::inc( data->read_pt );
          read_stats.count++;
       }
+      /** the last element gets the signal **/
+      signal_mask = output->back().signal;
       return( output );
    }
 
@@ -309,39 +324,28 @@ public:
 #endif
       }
       const size_t read_index( Pointer::val( data->read_pt ) );
-      T &output( data->store[ read_index ] );
+      T &output( data->store[ read_index ].item );
       return( output );
    }
 
-   void recycle()
-   {
-      Pointer::inc( data->read_pt );
-      read_stats.count++;
-   }
 
-   void recycle_range( const size_t range )
+   /**
+    * recycle - To be used in conjunction with peek().  Simply
+    * removes the item at the head of the queue and discards them
+    * @param range - const size_t, default range is 1
+    */
+   void recycle( const size_t range = 1 )
    {
-      assert( range <= data->max_cap ); 
+      assert( range <= data->max_cap );
       Pointer::incBy( range, data->read_pt );
       read_stats.count += range;
    }
 
 protected:
    Buffer::Data< T, type>      *data;
-   volatile Blocked                             read_stats;
-   volatile Blocked                             write_stats;
-   volatile struct SignalMask
-   {
-      SignalMask() : avail( false ),
-                     index( 0 ),
-                     sig( 0 )
-      {
-      }
-      
-      bool     avail;
-      size_t   index;
-      uint64_t sig;
-   }signal_mask;
+   volatile Blocked             read_stats;
+   volatile Blocked             write_stats;
+   volatile RBSignal            signal_mask;
 };
 
 
@@ -374,17 +378,14 @@ public:
       return( 0 );
    }
    
-   void  send_signal( const uint64_t sig )
+   void  send_signal( const RBSignal sig )
    {
-      /** get mem address of current read pointer **/
-      signal_mask.avail = true;
-      signal_mask.index = 0;
-      signal_mask.sig  = sig;
+      signal_mask = sig;
    }
 
-   std::uint64_t get_signal() 
+   RBSignal get_signal() 
    {
-      return( signal_mask.sig );
+      return( signal_mask );
    }
 
    /**
@@ -409,25 +410,34 @@ public:
    }
 
    /**
-    * push_back - This version won't write anything, it'll
+    * push - This version won't write anything, it'll
     * increment the counter and simply return;
     * @param   item, T
     */
-   void  push_back( T item )
+   void  push( T item, const RBSignal signal = RBSignal::RBNONE )
    {
-      data->store[ 0 ] = item ;
+      data->store[ 0 ].item   = item;
+      /** a bit awkward since it gives the same behavior as the actual queue **/
+      data->store[ 0 ].signal = signal;
       write_stats.count++;
    }
 
+   /**
+    * insert - insert a range of items into the queue.
+    * @param   begin - start iterator
+    * @param   end   - ending iterator
+    * @param   signal - const RBSignal, set if you want to send a signal
+    */
    template< class iterator_type >
-   void insert( iterator_type begin, iterator_type end )
+   void insert( iterator_type begin, iterator_type end, const RBSignal signal = RBSignal::RBNONE )
    {
       while( begin != end )
       {
-         data->store[ 0 ] = (*begin);
+         data->store[ 0 ].item = (*begin);
          begin++;
          write_stats.count++;
       }
+      data->store[ 0 ].signal = signal;
    }
  
 
@@ -439,7 +449,8 @@ public:
     */
    T pop()
    {
-      T output = data->store[ 0 ];
+      T output = data->store[ 0 ].item;
+      (this)->signal_mask = data->store[ 0 ].signal;
       read_stats.count++;
       return( output );
    }
@@ -450,8 +461,9 @@ public:
       auto *output( new std::array< T, N >( ) );
       for( size_t i( 0 ); i < N; i++ )
       {
-         (*output)[ i ] = data->store[ 0 ];
+         (*output)[ i ] = data->store[ 0 ].item;
       }
+      (this)->signal_mask = data->store[ 0 ].signal;
       return( output );
    }
 
@@ -465,16 +477,17 @@ public:
     */
     T& peek()
    {
-      T &output( data->store[ 0 ] );
+      T &output( data->store[ 0 ].item );
       return( output );
    }
    
-   void recycle()
-   {
-      read_stats.count++;
-   }
-
-   void recycle_range( const size_t range )
+   /**
+    * recycle - remove ``range'' items from the head of the
+    * queue and discard them.  Can be used in conjunction with
+    * the peek operator.
+    * @param   range - const size_t, default = 1
+    */
+   void recycle( const size_t range = 1 )
    {
       read_stats.count += range;
    }
@@ -484,17 +497,6 @@ protected:
    Buffer::Data< T, RingBufferType::Heap >      *data;
    volatile Blocked                             read_stats;
    volatile Blocked                             write_stats;
-   volatile struct SignalMask
-   {
-      SignalMask() : avail( false ),
-                     index( 0 ),
-                     sig( 0 )
-      {
-      }
-      
-      bool     avail;
-      size_t   index;
-      uint64_t sig;
-   }signal_mask;
+   volatile RBSignal                            signal_mask;
 };
 #endif /* END _RINGBUFFERBASE_TCC_ */

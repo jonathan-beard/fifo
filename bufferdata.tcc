@@ -29,8 +29,32 @@
 namespace Buffer
 {
 
+/**
+ * Element - simple struct that carries with it 
+ * a ``signal'' to enable synchronous signaling
+ * that is element aligned.  The send_signal()
+ * function enables asynchronous signaling with
+ * the same signal type (RBSignal).
+ */
 template < class X > struct Element
 {
+   /** default constructor **/
+   Element() : signal( RBSignal::RBNONE )
+   {
+   }
+   /**
+    * Element - copy constructor, the type
+    * X must have a defined assignment operator.
+    * This is simple for primitive types, but
+    * probably must be defined for objects,
+    * structs and more complex types.
+    */
+   Element( const Element< X > &other )
+   {
+      (this)->item   = other.item;
+      (this)->signal = other.signal;
+   }
+
    X item;
    RBSignal signal;
 } __attribute__((aligned(32)));

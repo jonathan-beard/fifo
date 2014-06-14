@@ -10,13 +10,14 @@
 #include <sstream>
 #include <fstream>
 #include "randomstring.tcc"
+#include "signalvars.hpp"
 
 struct Data
 {
    Data( size_t send ) : send_count(  send )
    {}
    size_t                 send_count;
-} data( 1e2 );
+} data( 1e6 );
 
 
 //#define USESharedMemory 1
@@ -38,15 +39,14 @@ Clock *system_clock = new SystemClock< Cycle >( 1 );
 void
 producer( Data &data, TheBuffer &buffer )
 {
-   size_t current_count( 0 );
+   int64_t current_count( 0 );
    const double service_time( 10.0e-6 );
    while( current_count++ < data.send_count )
    {
-      buffer.push_back( current_count );
+      buffer.push( current_count, (current_count == data.send_count ? RBSignal::RBEOF : RBSignal::RBNONE ) );
       const auto stop_time( system_clock->getTime() + service_time );
       while( system_clock->getTime() < stop_time );
    }
-   buffer.send_signal( 1 );
    return;
 }
 

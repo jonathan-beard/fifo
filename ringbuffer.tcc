@@ -267,7 +267,7 @@ protected:
           * record the throughput within this frame
           */
          if( write_copy.blocked == 0 && 
-               arrival_started  && buffer.signal_mask.sig == 0 )
+               arrival_started  && buffer.signal_mask == RBSignal::RBNONE )
          {
             data.items_arrived += write_copy.count;
             data.arrived_samples++;
