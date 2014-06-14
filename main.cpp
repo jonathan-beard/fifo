@@ -16,7 +16,7 @@ struct Data
    Data( size_t send ) : send_count(  send )
    {}
    size_t                 send_count;
-} data( 1e1 );
+} data( 1e2 );
 
 
 //#define USESharedMemory 1
@@ -27,12 +27,12 @@ struct Data
 typedef RingBuffer< int64_t, RingBufferType::SharedMemory, BUFFSIZE > TheBuffer;
 #elif defined USELOCAL
 typedef RingBuffer< int64_t /* buffer type */,
-                    RingBufferType::Heap /* allocation type */,
+                    RingBufferType::Heap/* allocation type */,
                     true /* turn on monitoring */ >  TheBuffer;
 #endif
 
 
-Clock *system_clock = new SystemClock< Cycle >( 1 );
+Clock *system_clock = new SystemClock< System >( 1 );
 
 
 void
@@ -129,4 +129,7 @@ main( int argc, char **argv )
        std::cout << test() << "\n";
    }
    //ofs.close();
+   if( system_clock != nullptr ) 
+      delete( system_clock );
 }
+

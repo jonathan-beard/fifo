@@ -134,7 +134,7 @@ public:
    std::uint64_t get_signal()
    {
       const size_t read_index( Pointer::val( data->read_pt ) );
-      std::cerr << signal_mask.index << " - " << read_index << "\n";
+      //std::cerr << signal_mask.index << " - " << read_index << "\n";
       if( signal_mask.avail && signal_mask.index == read_index )
       {
          std::cerr << "signal received\n";
