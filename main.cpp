@@ -28,7 +28,7 @@ struct Data
 typedef RingBuffer< int64_t, RingBufferType::SharedMemory, BUFFSIZE > TheBuffer;
 #elif defined USELOCAL
 typedef RingBuffer< int64_t /* buffer type */,
-                    RingBufferType::Heap/* allocation type */,
+                    RingBufferType::Infinite /* allocation type */,
                     true /* turn on monitoring */ >  TheBuffer;
 #endif
 
@@ -54,7 +54,7 @@ void
 consumer( Data &data , TheBuffer &buffer )
 {
    size_t   current_count( 0 );
-   const double service_time( 1.0e-6 );
+   const double service_time( 5.0e-6 );
    while( buffer.get_signal() != 1 )
    {
       current_count = buffer.pop();
