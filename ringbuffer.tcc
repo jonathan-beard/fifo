@@ -82,6 +82,8 @@ namespace Monitor
       static double get_arrival_rate( volatile QueueData &qd , 
                                       Units unit )
       {
+         
+         
          return( ( ((double)qd.items_arrived * (double)qd.item_unit) / 
                      (qd.sample_frequency * (double)qd.arrived_samples ) ) * 
                         (double)unit_conversion[ unit ] );
@@ -138,13 +140,13 @@ namespace Monitor
          return( stream );
       }
 
-      uint64_t          items_arrived;
-      uint64_t          arrived_samples;
-      uint64_t          items_departed;
-      uint64_t          departed_samples;
-      uint64_t          total_occupancy;
+      std::uint64_t          items_arrived;
+      std::uint64_t          arrived_samples;
+      std::uint64_t          items_departed;
+      std::uint64_t          departed_samples;
+      std::uint64_t          total_occupancy;
       const size_t      item_unit;
-      uint64_t          samples;
+      std::uint64_t          samples;
       const double      sample_frequency;
       double            sample_time;
    };
@@ -194,7 +196,7 @@ template< class T,
 public:
    RingBufferBaseMonitor( const size_t n ) : 
             RingBufferBase< T, type >(),
-            monitor_data( 1e-5 , sizeof( T ) ),
+            monitor_data( 5e-6 , sizeof( T ) ),
             monitor( nullptr ),
             term( false )
    {
@@ -267,7 +269,8 @@ protected:
           * record the throughput within this frame
           */
          if( write_copy.blocked == 0 && 
-               arrival_started  && buffer.signal_mask == RBSignal::RBNONE )
+               arrival_started  && 
+               buffer.signal_mask == RBSignal::RBNONE )
          {
             data.items_arrived += write_copy.count;
             data.arrived_samples++;

@@ -16,18 +16,18 @@ struct Data
 {
    Data( size_t send ) : send_count(  send )
    {}
-   size_t                 send_count;
+   std::int64_t          send_count;
 } data( 1e6 );
 
 
 //#define USESharedMemory 1
 #define USELOCAL 1
-#define BUFFSIZE 10000
+#define BUFFSIZE 100
 
 #ifdef USESharedMemory
-typedef RingBuffer< int64_t, RingBufferType::SharedMemory, BUFFSIZE > TheBuffer;
+typedef RingBuffer< std::int64_t, RingBufferType::SharedMemory, BUFFSIZE > TheBuffer;
 #elif defined USELOCAL
-typedef RingBuffer< int64_t /* buffer type */,
+typedef RingBuffer< std::int64_t /* buffer type */,
                     RingBufferType::Infinite /* allocation type */,
                     true /* turn on monitoring */ >  TheBuffer;
 #endif
@@ -39,8 +39,8 @@ Clock *system_clock = new SystemClock< Cycle >( 1 );
 void
 producer( Data &data, TheBuffer &buffer )
 {
-   int64_t current_count( 0 );
-   const double service_time( 10.0e-6 );
+   std::int64_t current_count( 0 );
+   const double service_time( 10.0e-7 );
    while( current_count++ < data.send_count )
    {
       buffer.push( current_count, (current_count == data.send_count ? RBSignal::RBEOF : RBSignal::RBNONE ) );
@@ -53,15 +53,14 @@ producer( Data &data, TheBuffer &buffer )
 void 
 consumer( Data &data , TheBuffer &buffer )
 {
-   size_t   current_count( 0 );
-   const double service_time( 5.0e-6 );
+   std::int64_t   current_count( 0 );
+   const double service_time( 1.0e-7 );
    while( buffer.get_signal() != 1 )
    {
       current_count = buffer.pop();
       const auto stop_time( system_clock->getTime() + service_time );
       while( system_clock->getTime() < stop_time );
    }
-   std::cerr << "count: " << current_count << "\n";
    return;
 }
 
@@ -72,12 +71,12 @@ std::string test()
    SharedMemory::GenKey( shmkey, 256 );
    std::string key( shmkey );
    
-   RingBuffer<int64_t, 
-              RingBufferType::SharedMemory, 
-              BUFFSIZE > buffer_a( key, 
-                                   Direction::Producer, 
-                                   false);
-   RingBuffer<int64_t, 
+   RingBuffer< std::int64_t, 
+               RingBufferType::SharedMemory, 
+               BUFFSIZE > buffer_a( key, 
+                                    Direction::Producer, 
+                                    false);
+   RingBuffer< std::int64_t, 
               RingBufferType::SharedMemory, 
               BUFFSIZE > buffer_b( key, 
                                    Direction::Consumer, 

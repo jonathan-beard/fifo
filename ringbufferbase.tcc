@@ -36,7 +36,7 @@
  * writes or blocking for space, otherwise blocking will
  * actively spin while waiting.
  */
-#define NICE 1
+//#define NICE 1
 
 typedef std::uint32_t blocked_part_t;
 typedef std::uint64_t blocked_whole_t;
@@ -246,7 +246,7 @@ public:
 #ifdef NICE      
          std::this_thread::yield();
 #endif        
-         if( read_stats.blocked == 0 )
+         //if( read_stats.blocked == 0 )
          {   
             read_stats.blocked  = 1;
          }
