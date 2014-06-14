@@ -32,7 +32,7 @@ typedef RingBuffer< int64_t /* buffer type */,
 #endif
 
 
-Clock *system_clock = new SystemClock< System >( 1 );
+Clock *system_clock = new SystemClock< Cycle >( 1 );
 
 
 void

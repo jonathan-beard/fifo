@@ -122,26 +122,14 @@ public:
       return( 0 );
    }
 
-   void  send_signal( const uint64_t sig )
+   void  send_signal( const RBSignal sig )
    {
-      const size_t write_index( Pointer::val( data->write_pt ) );
-      signal_mask.avail = true;
-      signal_mask.index = write_index;
-      signal_mask.sig   = sig;
-      std::cerr << "send_signal called\n";
+      signal_mask = sig;
    }
    
-   std::uint64_t get_signal()
+   RBSignal get_signal()
    {
-      const size_t read_index( Pointer::val( data->read_pt ) );
-      //std::cerr << signal_mask.index << " - " << read_index << "\n";
-      if( signal_mask.avail && signal_mask.index == read_index )
-      {
-         std::cerr << "signal received\n";
-         return( signal_mask.sig );
-      }
-      /** else **/
-      return( 0 );
+      return( signal_mask ); 
    }
    
    /**
@@ -170,7 +158,7 @@ public:
     * until there is enough space.
     * @param   item, T
     */
-   void  push_back( T item )
+   void  push_back( Element< T > &item )
    {
       while( space_avail() == 0 )
       {
@@ -190,7 +178,7 @@ public:
 #endif           
       }
       const size_t write_index( Pointer::val( data->write_pt ) );
-      data->store[ write_index ] = item;
+      data->store[ write_index ].item = item;
       Pointer::inc( data->write_pt );
       write_stats.all++;
    }
@@ -223,7 +211,7 @@ public:
          else
          {
             const size_t write_index( Pointer::val( data->write_pt ) );
-            data->store[ write_index ] = (*begin);
+            data->store[ write_index ].item = (*begin);
             Pointer::inc( data->write_pt );
             write_stats.all++;
             begin++;
@@ -258,10 +246,11 @@ public:
 #endif           
       }
       const size_t read_index( Pointer::val( data->read_pt ) );
-      T output = data->store[ read_index ];
+      Element< T > output = data->store[ read_index ];
+      signal_mask = output.signal;
       Pointer::inc( data->read_pt );
       read_stats.all++;
-      return( output );
+      return( output.item );
    }
 
    /**

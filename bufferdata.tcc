@@ -24,36 +24,45 @@
 #include "ringbuffertypes.hpp"
 #include <cstring>
 #include <cassert>
+#include "signalvars.hpp"
 
 namespace Buffer
 {
+
+template < class X > struct Element
+{
+   X item;
+   RBSignal signal;
+} __attribute__((aligned(32)));
 
 template < class T, 
            RingBufferType B = RingBufferType::Heap, 
            size_t SIZE = 0 > struct Data
 {
+
+
    Data( size_t max_cap ) : read_pt( max_cap ),
                             write_pt( max_cap ),
                             max_cap( max_cap )
    {
       errno = 0;
-      (this)->store = (T*) malloc( sizeof( T ) * max_cap );
-      std::memset( store, 0, sizeof( T ) * max_cap );
+      (this)->store = (Element< T >*) malloc( sizeof( Element< T >) * max_cap );
+      std::memset( store, 0, sizeof( Element< T > ) * max_cap );
       assert( (this)->store != nullptr );
    }
 
 
    ~Data()
    {
-      std::memset( store, 0, sizeof( T ) * max_cap );
+      std::memset( store, 0, sizeof( Element< T > ) * max_cap );
       delete( store );
       store = nullptr;
    }
 
-   Pointer read_pt;
-   Pointer write_pt;
-   size_t  max_cap;
-   T       *store;
+   Pointer        read_pt;
+   Pointer        write_pt;
+   size_t         max_cap;
+   Element< T >  *store;
 };
 
 template < class T, 
@@ -80,7 +89,7 @@ template < class T,
       volatile uint32_t a;
       volatile uint32_t b;
    }       cookie;
-   T       store[ SIZE ];
+   Element< T >       store[ SIZE ];
 };
 }
 #endif /* END _BUFFERDATA_TCC_ */
