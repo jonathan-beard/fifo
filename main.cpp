@@ -33,14 +33,14 @@ typedef RingBuffer< std::int64_t /* buffer type */,
 #endif
 
 
-Clock *system_clock = new SystemClock< Cycle >( 1 );
+Clock *system_clock = new SystemClock< System >( 1 );
 
 
 void
 producer( Data &data, TheBuffer &buffer )
 {
    std::int64_t current_count( 0 );
-   const double service_time( 10.0e-7 );
+   const double service_time( 10.0e-6 );
    while( current_count++ < data.send_count )
    {
       buffer.push( current_count, (current_count == data.send_count ? RBSignal::RBEOF : RBSignal::RBNONE ) );
@@ -54,7 +54,7 @@ void
 consumer( Data &data , TheBuffer &buffer )
 {
    std::int64_t   current_count( 0 );
-   const double service_time( 1.0e-7 );
+   const double service_time( 5.0e-6 );
    while( buffer.get_signal() != 1 )
    {
       current_count = buffer.pop();

@@ -1,4 +1,4 @@
-RINGBUFFERDIR = $(shell echo ~/)/GIT_RPO/simpleringbuffer/ 
+RINGBUFFERDIR = ../../simpleringbuffer/ 
 
 RBCFILES   = getrandom 
 RBCXXFILES = pointer shm Clock
