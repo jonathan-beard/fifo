@@ -17,7 +17,7 @@ struct Data
    Data( size_t send ) : send_count(  send )
    {}
    std::int64_t          send_count;
-} data( 1e6 );
+} data( 1e5 );
 
 
 //#define USESharedMemory 1
@@ -28,12 +28,12 @@ struct Data
 typedef RingBuffer< std::int64_t, RingBufferType::SharedMemory, BUFFSIZE > TheBuffer;
 #elif defined USELOCAL
 typedef RingBuffer< std::int64_t /* buffer type */,
-                    RingBufferType::Infinite /* allocation type */,
+                    RingBufferType::Heap /* allocation type */,
                     true /* turn on monitoring */ >  TheBuffer;
 #endif
 
 
-Clock *system_clock = new SystemClock< System >( 1 );
+Clock *system_clock = new SystemClock< Cycle >( 1 );
 
 
 void
@@ -43,7 +43,9 @@ producer( Data &data, TheBuffer &buffer )
    const double service_time( 10.0e-6 );
    while( current_count++ < data.send_count )
    {
-      buffer.push( current_count, (current_count == data.send_count ? RBSignal::RBEOF : RBSignal::RBNONE ) );
+      buffer.push( current_count, 
+         (current_count == data.send_count ? 
+          RBSignal::RBEOF : RBSignal::RBNONE ) );
       const auto stop_time( system_clock->getTime() + service_time );
       while( system_clock->getTime() < stop_time );
    }
@@ -55,7 +57,7 @@ consumer( Data &data , TheBuffer &buffer )
 {
    std::int64_t   current_count( 0 );
    const double service_time( 5.0e-6 );
-   while( buffer.get_signal() != 1 )
+   while( buffer.get_signal() != RBSignal::RBEOF )
    {
       current_count = buffer.pop();
       const auto stop_time( system_clock->getTime() + service_time );
