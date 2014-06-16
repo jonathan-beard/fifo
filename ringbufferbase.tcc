@@ -179,41 +179,8 @@ public:
 #endif           
       }
       const size_t write_index( Pointer::val( data->write_pt ) );
-#if OPTIMIZE
-#if __x86_64
-      const size_t size( sizeof( T ) );
-      uint8_t     *itemdata( reinterpret_cast< uint8_t* >( &item ) );
-      uint8_t     *stordata( reinterpret_cast< uint8_t* >( &data->store[ write_index ].item ) );
-      do
-      {
-         __asm__ volatile ("\
-            movq %[sizevar], %%rax \n\
-            movq $8,         %%rbx \n\
-            cmp  %%rax, %%rbx      \n\
-            jl   lessthan          \n\
-            ; greater than or eq   \n\
-            movq 
-            lessthan:              \n\
-         "
-         :
-         /** outputs **/
-
-         :
-         /** inputs **/
-            [sizevar] "m" (size),
-            [itemarr] "m" (itemdata)
-         :
-         /** clobbered registers **/
-            "rax", "rbx"
-         );
-      } while( size );
-#else
-#warning Optimize not yet supported for non-x86_64 platforms
-#endif
-#else
       data->store[ write_index ].item     = item;
       data->store[ write_index ].signal   = signal;
-#endif 
       Pointer::inc( data->write_pt );
       write_stats.all++;
    }
