@@ -179,7 +179,80 @@ public:
 #endif           
       }
       const size_t write_index( Pointer::val( data->write_pt ) );
+            
+#if  __x86_64 
+	int64_t size = sizeof(T);
+	unsigned char *srcp = (unsigned char *)&item;
+	unsigned char *dstp = (unsigned char *)&(data->store[write_index].item);
+	
+	__asm__ volatile("\
+			movq	%[in], %%rax		\n\
+			movq	%[out], %%rbx		\n\
+			jmp 	l64ctl			\n\
+		loop64:					\n\
+			movdqu	(%%rax), %%xmm0		\n\
+			movdqu	16(%%rax), %%xmm1	\n\
+			movdqu	32(%%rax), %%xmm2	\n\
+			movdqu	48(%%rax), %%xmm3	\n\
+			movdqu	%%xmm0, (%%rbx)		\n\
+			movdqu	%%xmm1, 16(%%rbx)	\n\
+			movdqu	%%xmm2, 32(%%rbx)	\n\
+			movdqu	%%xmm3, 48(%%rbx)	\n\
+			addq	$64, %%rax		\n\
+			addq	$64, %%rbx		\n\
+			subq	$64, %[SIZE]		\n\
+			l64ctl:				\n\
+			cmpq	$64, %[SIZE]		\n\
+			jge	loop64			\n\
+			jmp	l32ctl			\n\
+		loop32:					\n\
+			movq	(%%rax), %%mm0		\n\
+			movq	8(%%rax), %%mm1		\n\
+			movq	16(%%rax), %%mm2	\n\
+			movq	24(%%rax), %%mm3	\n\
+			movntq	%%mm0, (%%rbx)		\n\
+			movntq	%%mm1, 8(%%rbx)		\n\
+			movntq	%%mm2, 16(%%rbx)	\n\
+			movntq	%%mm3, 24(%%rbx)	\n\
+			addq	$32, %%rax		\n\
+			addq	$32, %%rbx		\n\
+			subq	$32, %[SIZE]		\n\
+			l32ctl:				\n\
+			cmpq	$32, %[SIZE]		\n\
+			jge	loop32			\n\
+			jmp 	l8ctl			\n\
+		loop8:					\n\
+			movq	(%%rax), %%mm0		\n\
+			movntq	%%mm0, (%%rbx)		\n\
+			addq	$8, %%rax		\n\
+			addq	$8, %%rbx		\n\
+			subq	$8, %[SIZE]		\n\
+			l8ctl:				\n\
+			cmpq	$8, %[SIZE]		\n\
+			jge	loop8			\n\
+			jmp 	l1ctl			\n\
+		loop1:					\n\
+			movb	(%%rax), %%al		\n\
+			movb	%%al, (%%rbx)		\n\
+			incq	%%rax			\n\
+			incq	%%rbx			\n\
+			decq	%[SIZE]			\n\
+			l1ctl:				\n\
+			cmpq	$1, %[SIZE]		\n\
+			jge	loop1"
+			:
+			:
+			[in] "g" (srcp), 
+			[out] "g" (dstp),			
+			[SIZE] "m" (size)
+			:
+			"mm0", "mm1", "mm2", "mm3", "mm4", 
+			"mm5", "mm6", "mm7", "rax", "rbx", "xmm0");	
+#else
       data->store[ write_index ].item     = item;
+#endif
+
+      
       data->store[ write_index ].signal   = signal;
       Pointer::inc( data->write_pt );
       write_stats.all++;
