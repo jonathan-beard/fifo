@@ -41,6 +41,161 @@
 typedef std::uint32_t blocked_part_t;
 typedef std::uint64_t blocked_whole_t;
 
+typedef struct {
+     uint32_t
+         CF      :  1,
+                 :  1,
+         PF      :  1,
+                 :  1,
+         AF      :  1,
+                 :  1,
+         ZF      :  1,
+         SF      :  1,
+         TF      :  1,
+         IF      :  1,
+         DF      :  1,
+         OF      :  1,
+         IOPL    :  2,
+         NT      :  1,
+                 :  1,
+         RF      :  1,
+         VM      :  1,
+         AC      :  1,
+         VIF     :  1,
+         VIP     :  1,
+         ID      :  1,
+                 : 10;
+} EFlags;
+
+
+typedef struct {
+   uint32_t eax, ebx, ecx, edx;
+} Reg;
+
+enum feature_levels {
+	FL_NONE,
+	FL_MMX,
+	FL_SSE2,
+	FL_AVX
+};
+
+
+#define    CPUID_BASIC     0x0
+#define    CPUID_LEVEL1    0x1
+
+void zero_registers (Reg *in)
+{
+	in->eax = 0x0;
+	in->ebx = 0x0;
+	in->ecx = 0x0;
+	in->edx = 0x0;
+}
+
+
+/**
+ * get_cpuid - sets eax, ebx, ecx, edx values in struct Reg based on input_eax input
+ */
+void get_cpuid (Reg *input_registers,Reg *output_registers)
+{
+#if(__i386__ == 1)
+   __asm__ volatile("\
+      movl    %[input_eax], %%eax            \n\
+      movl    %[input_ecx], %%ecx            \n\
+      cpuid                                  \n\
+      movl    %%eax, %[eax]                  \n\
+      movl    %%ebx, %[ebx]                  \n\
+      movl    %%ecx, %[ecx]                  \n\
+      movl    %%edx, %[edx]"
+      :
+      [eax] "=r" (output_registers->eax),
+      [ebx] "=r" (output_registers->ebx),
+      [ecx] "=r" (output_registers->ecx),
+      [edx] "=r" (output_registers->edx)
+      :
+      [input_eax] "m" (input_registers->eax),   
+      [input_ecx] "m" (input_registers->ecx)
+      :
+      "eax","ebx","ecx","edx"
+      );
+#endif
+
+
+#if(__x86_64__ == 1)
+   __asm__ volatile("\
+      movl    %[input_eax], %%eax             \n\
+      movl    %[input_ecx], %%ecx             \n\
+      cpuid                                  \n\
+      movl    %%eax, %[eax]                   \n\
+      movl    %%ebx, %[ebx]                   \n\
+      movl    %%ecx, %[ecx]                   \n\
+      movl    %%edx, %[edx]"                   
+      :
+      [eax] "=r" (output_registers->eax),
+      [ebx] "=r" (output_registers->ebx),
+      [ecx] "=r" (output_registers->ecx),
+      [edx] "=r" (output_registers->edx)
+      :
+      [input_eax] "m" (input_registers->eax),
+      [input_ecx] "m" (input_registers->ecx)
+      :
+      "eax","ebx","ecx","edx"
+   );
+#endif
+}
+
+int get_level0_data (unsigned int *max_level)
+{
+	Reg in, out;
+
+	in.eax = CPUID_BASIC;
+	get_cpuid(&in, &out);
+	
+	if (max_level)
+		*max_level = out.eax;
+		
+	return 0;
+}
+
+
+int get_level1_data (unsigned int max_level, unsigned int *eax, 
+	unsigned int *ecx, unsigned int *edx)
+{
+	Reg in, out;
+
+	in.eax = CPUID_LEVEL1;
+	get_cpuid(&in, &out);
+	
+	if (eax) *eax = out.eax;
+	if (ecx) *ecx = out.ecx;
+	if (edx) *edx = out.edx;
+	
+	return 0;
+}
+
+enum feature_levels get_highest_feature (unsigned int max_level)
+{
+	unsigned int ecx, edx;
+
+	if (max_level < 1) {
+		fprintf(stderr, "Error calling cpuid, cpuid not supported\n");
+		exit(-1);
+	}
+	
+	get_level1_data(max_level, NULL, &ecx, &edx);
+
+	if (ecx & (1 << 28))
+		return FL_AVX;
+
+	if (edx & (1 << 26))
+		return FL_SSE2;
+		
+	if (edx & (1 << 23))
+		return FL_MMX;
+			
+	return FL_NONE;
+}
+
+
 /**
  * Blocked - simple data structure to combine the send count
  * and blocked flag in one simple structure.  Greatly improves
@@ -63,6 +218,7 @@ union Blocked{
    blocked_whole_t    all;
 } __attribute__ ((aligned( 8 )));
 
+
 template < class T, 
            RingBufferType type > class RingBufferBase {
 public:
@@ -70,8 +226,19 @@ public:
     * RingBuffer - default constructor, initializes basic
     * data structures.
     */
-   RingBufferBase() : data( nullptr )
+   RingBufferBase() : data( nullptr ),
+   		      feature_level( 0 )
    {
+#if __x86_64
+	/** set cpuid feature level **/
+	unsigned int max_level;
+	
+	if (get_level0_data(&max_level) == -1) {
+		fprintf(stderr, "error getting level 0 data\n");
+	}
+	
+	feature_level = get_highest_feature(max_level);
+#endif
    }
    
    virtual ~RingBufferBase()
@@ -178,6 +345,8 @@ public:
            : );
 #endif           
       }
+      
+      
       const size_t write_index( Pointer::val( data->write_pt ) );
             
 #if  __x86_64 
@@ -188,24 +357,34 @@ public:
 	__asm__ volatile("\
 			movq	%[in], %%rax		\n\
 			movq	%[out], %%rbx		\n\
-			jmp 	l64ctl			\n\
-		loop64:					\n\
+			cmpb	$1, %[fl]		\n\
+			jl	l8ctl%=			\n\
+			je	l32ctl%=		\n\
+			cmpb	$2, %[fl]		\n\
+			je	l64ctl%=		\n\
+			jmp 	l128ctl%=		\n\
+		loop128%=:				\n\
+			l128ctl%=:			\n\
+			cmpq	$128, %[SIZE]		\n\
+			jge	loop128%=		\n\
+			jmp	l64ctl%=		\n\
+		loop64%=:				\n\
 			movdqu	(%%rax), %%xmm0		\n\
 			movdqu	16(%%rax), %%xmm1	\n\
 			movdqu	32(%%rax), %%xmm2	\n\
 			movdqu	48(%%rax), %%xmm3	\n\
-			movdqu	%%xmm0, (%%rbx)		\n\
-			movdqu	%%xmm1, 16(%%rbx)	\n\
-			movdqu	%%xmm2, 32(%%rbx)	\n\
-			movdqu	%%xmm3, 48(%%rbx)	\n\
+			movntdq	%%xmm0, (%%rbx)		\n\
+			movntdq	%%xmm1, 16(%%rbx)	\n\
+			movntdq	%%xmm2, 32(%%rbx)	\n\
+			movntdq	%%xmm3, 48(%%rbx)	\n\
 			addq	$64, %%rax		\n\
 			addq	$64, %%rbx		\n\
 			subq	$64, %[SIZE]		\n\
-			l64ctl:				\n\
+			l64ctl%=:			\n\
 			cmpq	$64, %[SIZE]		\n\
-			jge	loop64			\n\
-			jmp	l32ctl			\n\
-		loop32:					\n\
+			jge	loop64%=		\n\
+			jmp	l32ctl%=		\n\
+		loop32%=:				\n\
 			movq	(%%rax), %%mm0		\n\
 			movq	8(%%rax), %%mm1		\n\
 			movq	16(%%rax), %%mm2	\n\
@@ -217,37 +396,38 @@ public:
 			addq	$32, %%rax		\n\
 			addq	$32, %%rbx		\n\
 			subq	$32, %[SIZE]		\n\
-			l32ctl:				\n\
+			l32ctl%=:			\n\
 			cmpq	$32, %[SIZE]		\n\
-			jge	loop32			\n\
-			jmp 	l8ctl			\n\
-		loop8:					\n\
+			jge	loop32%=		\n\
+			jmp 	l8ctl%=			\n\
+		loop8%=:				\n\
 			movq	(%%rax), %%mm0		\n\
 			movntq	%%mm0, (%%rbx)		\n\
 			addq	$8, %%rax		\n\
 			addq	$8, %%rbx		\n\
 			subq	$8, %[SIZE]		\n\
-			l8ctl:				\n\
+			l8ctl%=:			\n\
 			cmpq	$8, %[SIZE]		\n\
-			jge	loop8			\n\
-			jmp 	l1ctl			\n\
-		loop1:					\n\
-			movb	(%%rax), %%al		\n\
-			movb	%%al, (%%rbx)		\n\
+			jge	loop8%=			\n\
+			jmp 	l1ctl%=			\n\
+		loop1%=:				\n\
+			movb	(%%rax), %%cl		\n\
+			movb	%%cl, (%%rbx)		\n\
 			incq	%%rax			\n\
 			incq	%%rbx			\n\
 			decq	%[SIZE]			\n\
-			l1ctl:				\n\
+			l1ctl%=:			\n\
 			cmpq	$1, %[SIZE]		\n\
-			jge	loop1"
+			jge	loop1%="
 			:
 			:
 			[in] "g" (srcp), 
 			[out] "g" (dstp),			
-			[SIZE] "m" (size)
+			[SIZE] "m" (size),
+			[fl] "g" (feature_level)
 			:
 			"mm0", "mm1", "mm2", "mm3", "mm4", 
-			"mm5", "mm6", "mm7", "rax", "rbx", "xmm0");	
+			"mm5", "mm6", "mm7", "rax", "rbx", "rcx", "xmm0");	
 #else
       data->store[ write_index ].item     = item;
 #endif
@@ -370,7 +550,6 @@ public:
       }
       /** the last element gets the signal **/
       signal_mask = output->back().signal;
-      /** set this once and on both sides so it should work with SHM **/
       return( output );
    }
 
@@ -420,6 +599,7 @@ protected:
    volatile Blocked             read_stats;
    volatile Blocked             write_stats;
    volatile RBSignal            signal_mask;
+   volatile std::uint8_t        feature_level;
 };
 
 
@@ -472,6 +652,7 @@ public:
    {
       return( data->max_cap );
    }
+
   
    /**
     * capacity - returns the capacity of this queue which is 
@@ -493,10 +674,6 @@ public:
       data->store[ 0 ].item   = item;
       /** a bit awkward since it gives the same behavior as the actual queue **/
       data->store[ 0 ].signal = signal;
-      if(! (this)->used )
-      {
-         (this)->used = true;
-      }
       write_stats.count++;
    }
 
@@ -516,10 +693,6 @@ public:
          write_stats.count++;
       }
       data->store[ 0 ].signal = signal;
-      if(! (this)->used )
-      {
-         (this)->used = true;
-      }
    }
  
 
@@ -534,10 +707,6 @@ public:
       T output = data->store[ 0 ].item;
       (this)->signal_mask = data->store[ 0 ].signal;
       read_stats.count++;
-      if(! (this)->used )
-      {
-         (this)->used = true;
-      }
       return( output );
    }
    
@@ -550,10 +719,6 @@ public:
          (*output)[ i ] = data->store[ 0 ].item;
       }
       (this)->signal_mask = data->store[ 0 ].signal;
-      if(! (this)->used )
-      {
-         (this)->used = true;
-      }
       return( output );
    }
 
