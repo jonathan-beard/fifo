@@ -370,6 +370,7 @@ public:
       }
       /** the last element gets the signal **/
       signal_mask = output->back().signal;
+      /** set this once and on both sides so it should work with SHM **/
       return( output );
    }
 
@@ -492,6 +493,10 @@ public:
       data->store[ 0 ].item   = item;
       /** a bit awkward since it gives the same behavior as the actual queue **/
       data->store[ 0 ].signal = signal;
+      if(! (this)->used )
+      {
+         (this)->used = true;
+      }
       write_stats.count++;
    }
 
@@ -511,6 +516,10 @@ public:
          write_stats.count++;
       }
       data->store[ 0 ].signal = signal;
+      if(! (this)->used )
+      {
+         (this)->used = true;
+      }
    }
  
 
@@ -525,6 +534,10 @@ public:
       T output = data->store[ 0 ].item;
       (this)->signal_mask = data->store[ 0 ].signal;
       read_stats.count++;
+      if(! (this)->used )
+      {
+         (this)->used = true;
+      }
       return( output );
    }
    
@@ -537,6 +550,10 @@ public:
          (*output)[ i ] = data->store[ 0 ].item;
       }
       (this)->signal_mask = data->store[ 0 ].signal;
+      if(! (this)->used )
+      {
+         (this)->used = true;
+      }
       return( output );
    }
 

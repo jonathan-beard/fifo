@@ -285,7 +285,6 @@ protected:
          {
             data.items_departed += read_copy.count;
             data.departed_samples++;
-//            departure_log.push_back( read_copy.count );
          }
 
          
@@ -302,17 +301,6 @@ protected:
 #endif               
          }
       }
-//      std::ofstream ofs( "outputlog.csv" );
-//      if( ! ofs.is_open() )
-//      {
-//         std::cerr << "Couldn't open log!!\n";
-//         exit( EXIT_FAILURE );
-//      }
-//      for( std::uint32_t val : departure_log )
-//      {
-//         ofs << val << "\n";
-//      }
-//      ofs.close();
    }
    
    volatile Monitor::QueueData monitor_data;

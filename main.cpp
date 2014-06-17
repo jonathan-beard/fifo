@@ -17,7 +17,7 @@ struct Data
    Data( size_t send ) : send_count(  send )
    {}
    std::int64_t          send_count;
-} data( 1e5 );
+} data( 1e6 );
 
 
 //#define USESharedMemory 1
@@ -33,7 +33,7 @@ typedef RingBuffer< std::int64_t /* buffer type */,
 #endif
 
 
-Clock *system_clock = new SystemClock< Cycle >( 1 );
+Clock *system_clock = new SystemClock< System >( 1 );
 
 
 void
@@ -63,6 +63,7 @@ consumer( Data &data , TheBuffer &buffer )
       const auto stop_time( system_clock->getTime() + service_time );
       while( system_clock->getTime() < stop_time );
    }
+   std::cerr << current_count << "\n";
    return;
 }
 

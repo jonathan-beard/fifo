@@ -22,6 +22,7 @@
 
 enum RBSignal  {
    RBNONE = 0,
-   RBEOF = 1
+   RBEOF,
+   RBQUIT
 };
 #endif /* END _SIGNALVARS_HPP_ */
