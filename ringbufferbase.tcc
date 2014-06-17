@@ -365,8 +365,6 @@ public:
 			jmp 	l128ctl%=		\n\
 		loop128%=:				\n\
 			l128ctl%=:			\n\
-			cmpq	$128, %[SIZE]		\n\
-			jge	loop128%=		\n\
 			jmp	l64ctl%=		\n\
 		loop64%=:				\n\
 			movdqu	(%%rax), %%xmm0		\n\
