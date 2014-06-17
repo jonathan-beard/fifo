@@ -349,7 +349,7 @@ public:
       
       const size_t write_index( Pointer::val( data->write_pt ) );
             
-#if  __x86_64 
+#if  0 
 	int64_t size = sizeof(T);
 	unsigned char *srcp = (unsigned char *)&item;
 	unsigned char *dstp = (unsigned char *)&(data->store[write_index].item);
@@ -511,7 +511,13 @@ public:
       }
       const size_t read_index( Pointer::val( data->read_pt ) );
       Buffer::Element< T > output = data->store[ read_index ];
-      signal_mask = output.signal;
+      /**
+       * TODO, fix signalling here.  This shouldn't write over
+       * previously received signals that the consumer hasn't 
+       * read yet...this creates a nasty race condition if the
+       * user isn't careful.
+       */
+      //signal_mask = output.signal;
       Pointer::inc( data->read_pt );
       read_stats.all++;
       return( output.item );
@@ -547,7 +553,13 @@ public:
          read_stats.count++;
       }
       /** the last element gets the signal **/
-      signal_mask = output->back().signal;
+      /**
+       * TODO, fix signalling here.  This shouldn't write over
+       * previously received signals that the consumer hasn't 
+       * read yet...this creates a nasty race condition if the
+       * user isn't careful.
+       */
+      //signal_mask = output->back().signal;
       return( output );
    }
 
