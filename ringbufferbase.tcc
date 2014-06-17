@@ -348,12 +348,15 @@ public:
       
       
       const size_t write_index( Pointer::val( data->write_pt ) );
-            
-#if  0 
+      
+/** 
+ * TODO, fix copy issue on intel EXX architecture.  Works well on AMD
+ * 6XXX series though.
+ */
+#if  0
 	int64_t size = sizeof(T);
 	unsigned char *srcp = (unsigned char *)&item;
 	unsigned char *dstp = (unsigned char *)&(data->store[write_index].item);
-	
 	__asm__ volatile("\
 			movq	%[in], %%rax		\n\
 			movq	%[out], %%rbx		\n\
@@ -362,10 +365,6 @@ public:
 			je	l32ctl%=		\n\
 			cmpb	$2, %[fl]		\n\
 			je	l64ctl%=		\n\
-			jmp 	l128ctl%=		\n\
-		loop128%=:				\n\
-			l128ctl%=:			\n\
-			jmp	l64ctl%=		\n\
 		loop64%=:				\n\
 			movdqu	(%%rax), %%xmm0		\n\
 			movdqu	16(%%rax), %%xmm1	\n\
