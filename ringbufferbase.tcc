@@ -97,7 +97,7 @@ void zero_registers (Reg *in)
  */
 void get_cpuid (Reg *input_registers,Reg *output_registers)
 {
-#if(__i386__ == 1)
+#if(__i386__ == 1 || __x86_64 == 1)
    __asm__ volatile("\
       movl    %[input_eax], %%eax            \n\
       movl    %[input_ecx], %%ecx            \n\
@@ -117,29 +117,6 @@ void get_cpuid (Reg *input_registers,Reg *output_registers)
       :
       "eax","ebx","ecx","edx"
       );
-#endif
-
-
-#if(__x86_64__ == 1)
-   __asm__ volatile("\
-      movl    %[input_eax], %%eax             \n\
-      movl    %[input_ecx], %%ecx             \n\
-      cpuid                                  \n\
-      movl    %%eax, %[eax]                   \n\
-      movl    %%ebx, %[ebx]                   \n\
-      movl    %%ecx, %[ecx]                   \n\
-      movl    %%edx, %[edx]"                   
-      :
-      [eax] "=r" (output_registers->eax),
-      [ebx] "=r" (output_registers->ebx),
-      [ecx] "=r" (output_registers->ecx),
-      [edx] "=r" (output_registers->edx)
-      :
-      [input_eax] "m" (input_registers->eax),
-      [input_ecx] "m" (input_registers->ecx)
-      :
-      "eax","ebx","ecx","edx"
-   );
 #endif
 }
 
@@ -227,9 +204,10 @@ public:
     * data structures.
     */
    RingBufferBase() : data( nullptr ),
-   		      feature_level( 0 )
+   		             feature_level( 0 ),
+                      allocate_called( false )
    {
-#if __x86_64
+#if(__i386__ == 1 || __x86_64 == 1)
 	/** set cpuid feature level **/
 	unsigned int max_level;
 	
@@ -290,11 +268,20 @@ public:
       return( 0 );
    }
 
+   /**
+    * send_signal - sends an asynchronous signal to the receiver.
+    * @param   sig - const RBSignal
+    */
    void  send_signal( const RBSignal sig )
    {
       signal_mask = sig;
    }
    
+   /**
+    * get_signal - returns a reference to the signal mask for this
+    * queue.
+    * @return volatile RBSignal&
+    */
    RBSignal get_signal()
    {
       return( signal_mask ); 
@@ -321,8 +308,13 @@ public:
       return( data->max_cap );
    }
 
-//TODO, finish this thought
-#if 0
+   /**
+    * allocate - get a reference to an object of type T at the 
+    * end of the queue.  Should be released to the queue using
+    * the push command once the calling thread is done with the 
+    * memory.
+    * @return T&, reference to memory location at head of queue
+    */
    T& allocate()
    {
       while( space_avail() == 0 )
@@ -342,10 +334,27 @@ public:
            : );
 #endif           
       }
+      (this)->allocate_called = true;
       const size_t write_index( Pointer::val( data->write_pt ) );
-      return( data->store[ write_index ].item;
+      return( data->store[ write_index ].item );
    }
-#endif
+
+   /**
+    * push - releases the last item allocated by allocate() to
+    * the queue.  Function will imply return if allocate wasn't
+    * called prior to calling this function.
+    * @param signal - const RBSignal signal, default: RBNONE
+    */
+   void push( const RBSignal signal = RBSignal::RBNONE )
+   {
+      if( ! (this)->allocate_called ) return;
+      const size_t write_index( Pointer::val( data->write_pt ) );
+      data->store[ write_index ].signal = signal;
+      
+      Pointer::inc( data->write_pt );
+      write_stats.all++;
+      (this)->allocate_called = false;
+   }
 
    /**
     * push- writes a single item to the queue, blocks
@@ -375,11 +384,7 @@ public:
       
       const size_t write_index( Pointer::val( data->write_pt ) );
       
-/** 
- * TODO, fix copy issue on intel EXX architecture.  Works well on AMD
- * 6XXX series though.
- */
-#if __x86_64
+#if 0
 	int64_t size = sizeof(T);
 	unsigned char *srcp = (unsigned char *)&item;
 	unsigned char *dstp = (unsigned char *)&(data->store[write_index].item);
@@ -517,14 +522,15 @@ public:
     * @return  T, item read.  It is removed from the
     *          q as soon as it is read
     */
-    T pop()
+   void pop( T *item )
    {
+      assert( item != nullptr );
       while( size() == 0 )
       {
 #ifdef NICE      
          std::this_thread::yield();
 #endif        
-         //if( read_stats.blocked == 0 )
+         if( read_stats.blocked == 0 )
          {   
             read_stats.blocked  = 1;
          }
@@ -537,17 +543,18 @@ public:
 #endif           
       }
       const size_t read_index( Pointer::val( data->read_pt ) );
-      Buffer::Element< T > output = data->store[ read_index ];
+      Buffer::Element< T > &output( data->store[ read_index ] );
       /**
        * TODO, fix signalling here.  This shouldn't write over
        * previously received signals that the consumer hasn't 
        * read yet...this creates a nasty race condition if the
        * user isn't careful.
        */
-      //signal_mask = output.signal;
+      signal_mask = output.signal;
+      *item = output.item;
       Pointer::inc( data->read_pt );
       read_stats.all++;
-      return( output.item );
+      return;
    }
 
    /**
@@ -558,7 +565,7 @@ public:
     * or some other structure.
     */
    template< size_t N >
-   std::array< T, N >*  pop_range()
+   void  pop_range( std::array< T, N > &output )
    {
       while( size() < N )
       {
@@ -570,23 +577,22 @@ public:
             read_stats.blocked = 1;
          }
       }
-      auto *output( new std::array< T, N >() );
-      //TODO, this section could be optimized quite a bit
+     
+      size_t read_index;
       for( size_t i( 0 ); i < N; i++ )
       {
-         const size_t read_index( Pointer::val( data->read_pt ) );
-         (*output)[ i ] = data->store[ read_index ].item;
-         Pointer::inc( data->read_pt );
-         read_stats.count++;
+         read_index( Pointer::val( data->read_pt ) );
+         output[ i ] = data->store[ read_index ].item;
+         if( i != (N - 1 ) )
+         {
+            Pointer::inc( data->read_pt );
+            read_stats.count++;
+         }
       }
-      /** the last element gets the signal **/
-      /**
-       * TODO, fix signalling here.  This shouldn't write over
-       * previously received signals that the consumer hasn't 
-       * read yet...this creates a nasty race condition if the
-       * user isn't careful.
-       */
-      //signal_mask = output->back().signal;
+      /** TODO, perhaps might be better to consume all signals **/
+      signal_mask = data->store[ read_index ].signal;
+      Pointer::inc( data->read_pt );
+      read_stats.count++;
       return( output );
    }
 
@@ -637,6 +643,7 @@ protected:
    volatile Blocked             write_stats;
    volatile RBSignal            signal_mask;
    volatile std::uint8_t        feature_level;
+   volatile bool                allocate_called;
 };
 
 
@@ -650,7 +657,8 @@ public:
     * RingBuffer - default constructor, initializes basic
     * data structures.
     */
-   RingBufferBase() : data( nullptr )
+   RingBufferBase() : data( nullptr ),
+                      allocate_called( false )
    {
    }
    
@@ -701,6 +709,34 @@ public:
       return( data->max_cap );
    }
 
+   
+   /**
+    * allocate - get a reference to an object of type T at the 
+    * end of the queue.  Should be released to the queue using
+    * the push command once the calling thread is done with the 
+    * memory.
+    * @return T&, reference to memory location at head of queue
+    */
+   T& allocate()
+   {
+      (this)->allocate_called = true;
+      return( data->store[ 0 ].item );
+   }
+
+   /**
+    * push - releases the last item allocated by allocate() to
+    * the queue.  Function will imply return if allocate wasn't
+    * called prior to calling this function.
+    * @param signal - const RBSignal signal, default: RBNONE
+    */
+   void push( const RBSignal signal = RBSignal::RBNONE )
+   {
+      if( ! (this)->allocate_called ) return;
+      data->store[ 0 ].signal = signal;
+      write_stats.all++;
+      (this)->allocate_called = false;
+   }
+
    /**
     * push - This version won't write anything, it'll
     * increment the counter and simply return;
@@ -721,7 +757,9 @@ public:
     * @param   signal - const RBSignal, set if you want to send a signal
     */
    template< class iterator_type >
-   void insert( iterator_type begin, iterator_type end, const RBSignal signal = RBSignal::RBNONE )
+   void insert( iterator_type begin, 
+                iterator_type end, 
+                const RBSignal signal = RBSignal::RBNONE )
    {
       while( begin != end )
       {
@@ -739,24 +777,31 @@ public:
     * @return  T, item read.  It is removed from the
     *          q as soon as it is read
     */
-   T pop()
+   void pop( T *item )
    {
-      T output = data->store[ 0 ].item;
+      *item  = data->store[ 0 ].item;
       (this)->signal_mask = data->store[ 0 ].signal;
       read_stats.count++;
-      return( output );
    }
-   
+  
+   /**
+    * pop_range - dummy function version of the real one above
+    * sets the input array to whatever "dummy" data has been
+    * passed into the buffer, often real data.  In most cases
+    * this will allow the application to work as it would with
+    * correct inputs even if the overall output will be junk.  This
+    * enables correct measurement of the arrival and service rates.
+    * @param output - std:;array< T, N >*
+    */
    template< size_t N >
-   std::array< T, N >* pop_range()
+   void pop_range( std::array< T, N > *output )
    {
-      auto *output( new std::array< T, N >( ) );
+      assert( output != nullptr );
       for( size_t i( 0 ); i < N; i++ )
       {
-         (*output)[ i ] = data->store[ 0 ].item;
+         output[ i ] = data->store[ 0 ].item;
       }
       (this)->signal_mask = data->store[ 0 ].signal;
-      return( output );
    }
 
 
@@ -790,5 +835,6 @@ protected:
    volatile Blocked                             read_stats;
    volatile Blocked                             write_stats;
    volatile RBSignal                            signal_mask;
+   volatile bool                                allocate_called;
 };
 #endif /* END _RINGBUFFERBASE_TCC_ */

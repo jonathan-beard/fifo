@@ -40,10 +40,12 @@ void
 producer( Data &data, TheBuffer &buffer )
 {
    std::int64_t current_count( 0 );
-   const double service_time( 30.0e-6 );
+   const double service_time( 10.0e-6 );
    while( current_count++ < data.send_count )
    {
-      buffer.push( current_count, 
+      auto &ref( buffer.allocate() );
+      ref = current_count;
+      buffer.push( /* current_count, */ 
          (current_count == data.send_count ? 
           RBSignal::RBEOF : RBSignal::RBNONE ) );
       const auto stop_time( system_clock->getTime() + service_time );
@@ -59,11 +61,10 @@ consumer( Data &data , TheBuffer &buffer )
    const double service_time( 5.0e-6 );
    while( buffer.get_signal() != RBSignal::RBEOF )
    {
-      current_count = buffer.pop();
+      buffer.pop( &current_count );
       const auto stop_time( system_clock->getTime() + service_time );
       while( system_clock->getTime() < stop_time );
    }
-   std::cerr << current_count << "\n";
    return;
 }
 
