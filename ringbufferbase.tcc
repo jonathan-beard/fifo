@@ -321,6 +321,8 @@ public:
       return( data->max_cap );
    }
 
+//TODO, finish this thought
+#if 0
    T& allocate()
    {
       while( space_avail() == 0 )
@@ -343,7 +345,7 @@ public:
       const size_t write_index( Pointer::val( data->write_pt ) );
       return( data->store[ write_index ].item;
    }
-
+#endif
 
    /**
     * push- writes a single item to the queue, blocks
@@ -377,7 +379,7 @@ public:
  * TODO, fix copy issue on intel EXX architecture.  Works well on AMD
  * 6XXX series though.
  */
-#if 0
+#if __x86_64
 	int64_t size = sizeof(T);
 	unsigned char *srcp = (unsigned char *)&item;
 	unsigned char *dstp = (unsigned char *)&(data->store[write_index].item);
@@ -449,7 +451,8 @@ public:
 			[fl] "g" (feature_level)
 			:
 			"mm0", "mm1", "mm2", "mm3", "mm4", 
-			"mm5", "mm6", "mm7", "rax", "rbx", "rcx", "xmm0");	
+			"mm5", "mm6", "mm7", "rax", "rbx", "rcx", 
+         "xmm0", "xmm1","xmm2","xmm3" );	
 #else
       data->store[ write_index ].item     = item;
 #endif
