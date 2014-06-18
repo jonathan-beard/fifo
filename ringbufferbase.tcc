@@ -321,6 +321,30 @@ public:
       return( data->max_cap );
    }
 
+   T& allocate()
+   {
+      while( space_avail() == 0 )
+      {
+#ifdef NICE      
+         std::this_thread::yield();
+#endif         
+         if( write_stats.blocked == 0 )
+         {   
+            write_stats.blocked = 1;
+         }
+#if __x86_64 
+         __asm__ volatile("\
+           pause"
+           :
+           :
+           : );
+#endif           
+      }
+      const size_t write_index( Pointer::val( data->write_pt ) );
+      return( data->store[ write_index ].item;
+   }
+
+
    /**
     * push- writes a single item to the queue, blocks
     * until there is enough space.
