@@ -353,7 +353,7 @@ public:
  * TODO, fix copy issue on intel EXX architecture.  Works well on AMD
  * 6XXX series though.
  */
-#if  0
+#if 0
 	int64_t size = sizeof(T);
 	unsigned char *srcp = (unsigned char *)&item;
 	unsigned char *dstp = (unsigned char *)&(data->store[write_index].item);
@@ -415,7 +415,8 @@ public:
 			decq	%[SIZE]			\n\
 			l1ctl%=:			\n\
 			cmpq	$1, %[SIZE]		\n\
-			jge	loop1%="
+			jge	loop1%=        \n\
+         mfence"
 			:
 			:
 			[in] "g" (srcp), 
