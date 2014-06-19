@@ -246,7 +246,6 @@ protected:
                                volatile Monitor::QueueData     &data )
    {
       bool arrival_started( false );
-//      std::vector< std::uint32_t > departure_log;
       while( ! term )
       {
          const Blocked read_copy( buffer.read_stats );

@@ -344,7 +344,7 @@ public:
              * operations slows the queue down drastically so, perhaps
              * this is in fact the best of all possible returns.
              */
-            return( data->max_cap );
+            return( data->max_cap  );
          }
          else
          {
