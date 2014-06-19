@@ -697,7 +697,7 @@ public:
     */
    size_t   size()
    {
-      return( 0 );
+      return( 1 );
    }
    
    void  send_signal( const RBSignal sig )
