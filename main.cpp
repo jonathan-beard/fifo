@@ -11,13 +11,16 @@
 #include <fstream>
 #include "randomstring.tcc"
 #include "signalvars.hpp"
+#include <cassert>
+
+#define MAX_VAL 1e6
 
 struct Data
 {
-   Data( size_t send ) : send_count(  send )
+   Data( std::int64_t send ) : send_count(  send )
    {}
    std::int64_t          send_count;
-} data( 1e6 );
+} data( MAX_VAL );
 
 
 //#define USESharedMemory 1
@@ -61,10 +64,11 @@ consumer( Data &data , TheBuffer &buffer )
    const double service_time( 5.0e-6 );
    while( buffer.get_signal() != RBSignal::RBEOF )
    {
-      buffer.pop( &current_count );
+      buffer.pop( current_count );
       const auto stop_time( system_clock->getTime() + service_time );
       while( system_clock->getTime() < stop_time );
    }
+   assert( current_count == MAX_VAL );
    return;
 }
 
