@@ -765,7 +765,7 @@ public:
     * increment the counter and simply return;
     * @param   item, T
     */
-   void  push( T item, const RBSignal signal = RBSignal::RBNONE )
+   void  push( T &item, const RBSignal signal = RBSignal::RBNONE )
    {
       data->store[ 0 ].item   = item;
       /** a bit awkward since it gives the same behavior as the actual queue **/
@@ -800,9 +800,9 @@ public:
     * @return  T, item read.  It is removed from the
     *          q as soon as it is read
     */
-   void pop( T *item )
+   void pop( T &item )
    {
-      *item  = data->store[ 0 ].item;
+      item  = data->store[ 0 ].item;
       (this)->signal_mask = data->store[ 0 ].signal;
       read_stats.count++;
    }
@@ -817,9 +817,8 @@ public:
     * @param output - std:;array< T, N >*
     */
    template< size_t N >
-   void pop_range( std::array< T, N > *output )
+   void  pop_range( std::array< T, N > &output )
    {
-      assert( output != nullptr );
       for( size_t i( 0 ); i < N; i++ )
       {
          output[ i ] = data->store[ 0 ].item;
