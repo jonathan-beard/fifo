@@ -132,7 +132,7 @@ main( int argc, char **argv )
    //   std::cerr << "Couldn't open ofstream!!\n";
    //   exit( EXIT_FAILURE );
    //}
-   int runs( 1 );
+   int runs( 20 );
    while( runs-- )
    {
        std::cout << test() << "\n";

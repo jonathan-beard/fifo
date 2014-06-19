@@ -101,19 +101,26 @@ void zero_registers (Reg *in)
  */
 void get_cpuid (Reg *input_registers, Reg *output_registers)
 {
-#if (defined __x86_64 ) || (defined i386)
-
-	__asm__ volatile("cpuid"                   
-		:
-		"=a" (output_registers->eax),
-		"=b" (output_registers->ebx),
-		"=c" (output_registers->ecx),
-		"=d" (output_registers->edx)
-		:
-		"a" (input_registers->eax),
-		"c" (input_registers->ecx)
-		:
-		"eax","ebx","ecx","edx");
+#if( __i386__ == 1 || __x86_64 == 1 )
+   __asm__ volatile ("\
+      movl  %[input_eax], %%eax     \n\
+      movl  %[input_ecx], %%ecx     \n\
+      cpuid                         \n\
+      movl  %%eax,        %[eax]    \n\
+      movl  %%ebx,        %[ebx]    \n\
+      movl  %%ecx,        %[ecx]    \n\
+      movl  %%edx,        %[edx]"
+      :
+      [eax] "=r"  (output_registers->eax),
+      [ebx] "=r"  (output_registers->ebx),
+      [ecx] "=r"  (output_registers->ecx),
+      [edx] "=r"  (output_registers->edx)
+      :
+      [input_eax] "m" (input_registers->eax),
+      [input_ecx] "m" (input_registers->ecx)
+      :
+      "eax","ebx","ecx","edx"
+      );
 #endif
 }
 
@@ -361,10 +368,7 @@ public:
     */
    void  send_signal( const RBSignal sig )
    {
-      if( signal_mask == RBSignal::RBNONE )
-      { 
-         signal_mask = sig;
-      }
+      signal_mask = sig;
    }
    
    /**
@@ -375,7 +379,7 @@ public:
    RBSignal get_signal()
    {
       const auto out( signal_mask );
-      signal_mask = RBSignal::RBNONE;
+      //signal_mask = RBSignal::RBNONE;
       return( out ); 
    }
    
@@ -474,11 +478,11 @@ public:
       }
       
 	const size_t write_index( Pointer::val( data->write_pt ) );
-#if  __x86_64 
-	rb_write((unsigned char *)&(data->store[write_index].item), 
-		(unsigned char *)&item, sizeof(T), feature_level);
-      
-      const size_t write_index( Pointer::val( data->write_pt ) );
+#if  0 
+	rb_write( (unsigned char *)&(data->store[write_index].item), 
+		       (unsigned char *)&item, 
+             sizeof(T), 
+             feature_level );
 #else      
 	data->store[ write_index ].item     = item;
 #endif
@@ -569,10 +573,7 @@ public:
        * read yet...this creates a nasty race condition if the
        * user isn't careful.
        */
-      if( signal_mask == RBSignal::RBNONE )
-      {
-         signal_mask = output.signal;
-      }
+      signal_mask = output.signal;
       item = output.item;
       Pointer::inc( data->read_pt );
       read_stats.all++;
