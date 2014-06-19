@@ -15,6 +15,8 @@
 
 #define MAX_VAL 1e6
 
+
+
 struct Data
 {
    Data( std::int64_t send ) : send_count(  send )
