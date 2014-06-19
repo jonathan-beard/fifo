@@ -36,7 +36,7 @@
  * writes or blocking for space, otherwise blocking will
  * actively spin while waiting.
  */
-//#define NICE 1
+#define NICE 1
 
 typedef std::uint32_t blocked_part_t;
 typedef std::uint64_t blocked_whole_t;
@@ -233,6 +233,7 @@ public:
    {
       const auto   wrap_write( Pointer::wrapIndicator( data->write_pt  ) ),
                    wrap_read(  Pointer::wrapIndicator( data->read_pt   ) );
+
       const auto   wpt( Pointer::val( data->write_pt ) ), 
                    rpt( Pointer::val( data->read_pt  ) );
       if( wpt == rpt )
@@ -274,7 +275,10 @@ public:
     */
    void  send_signal( const RBSignal sig )
    {
-      signal_mask = sig;
+      if( signal_mask == RBSignal::RBNONE )
+      { 
+         signal_mask = sig;
+      }
    }
    
    /**
@@ -284,7 +288,9 @@ public:
     */
    RBSignal get_signal()
    {
-      return( signal_mask ); 
+      const auto out( signal_mask );
+      signal_mask = RBSignal::RBNONE;
+      return( out ); 
    }
    
    /**
@@ -395,7 +401,31 @@ public:
 			jl	l8ctl%=			\n\
 			je	l32ctl%=		\n\
 			cmpb	$2, %[fl]		\n\
-			je	l64ctl%=		\n\
+			je	l128ctl%=		\n\
+		loop128%=:				\n\
+			movdqu	(%%rax),       %%xmm0	\n\
+			movdqu	16(%%rax),     %%xmm1	\n\
+			movdqu	32(%%rax),     %%xmm2	\n\
+			movdqu	48(%%rax),     %%xmm3	\n\
+			movdqu	64(%%rax),     %%xmm4	\n\
+			movdqu	80(%%rax),     %%xmm5	\n\
+			movdqu	96(%%rax),     %%xmm6	\n\
+			movdqu	112(%%rax),    %%xmm7	\n\
+			movntdq	%%xmm0, (%%rbx)		   \n\
+			movntdq	%%xmm1, 16(%%rbx)	      \n\
+			movntdq	%%xmm2, 32(%%rbx)	      \n\
+			movntdq	%%xmm3, 48(%%rbx)	      \n\
+			movntdq	%%xmm4, 64(%%rbx)	      \n\
+			movntdq	%%xmm5, 80(%%rbx)	      \n\
+			movntdq	%%xmm6, 96(%%rbx)	      \n\
+			movntdq	%%xmm7, 112(%%rbx)	   \n\
+			addq	$128, %%rax		\n\
+			addq	$128, %%rbx		\n\
+			subq	$128, %[SIZE]		\n\
+			l128ctl%=:			\n\
+			cmpq	$128, %[SIZE]		\n\
+			jge	loop128%=		\n\
+			jmp	l64ctl%=		\n\
 		loop64%=:				\n\
 			movdqu	(%%rax), %%xmm0		\n\
 			movdqu	16(%%rax), %%xmm1	\n\
@@ -457,7 +487,8 @@ public:
 			:
 			"mm0", "mm1", "mm2", "mm3", "mm4", 
 			"mm5", "mm6", "mm7", "rax", "rbx", "rcx", 
-         "xmm0", "xmm1","xmm2","xmm3" );	
+         "xmm0", "xmm1","xmm2","xmm3",	
+         "xmm4", "xmm5","xmm6","xmm7" );	
 #else
       data->store[ write_index ].item     = item;
 #endif
@@ -522,9 +553,8 @@ public:
     * @return  T, item read.  It is removed from the
     *          q as soon as it is read
     */
-   void pop( T *item )
+   void pop( T &item )
    {
-      assert( item != nullptr );
       while( size() == 0 )
       {
 #ifdef NICE      
@@ -550,8 +580,11 @@ public:
        * read yet...this creates a nasty race condition if the
        * user isn't careful.
        */
-      signal_mask = output.signal;
-      *item = output.item;
+      if( signal_mask == RBSignal::RBNONE )
+      {
+         signal_mask = output.signal;
+      }
+      item = output.item;
       Pointer::inc( data->read_pt );
       read_stats.all++;
       return;
