@@ -238,14 +238,14 @@ private:
                shl      $32, %%rdx              \n\
                orq      %%rax, %%rdx            \n\
                movq     %%rdx, %[prev]"
-#elif INTEL
+#elif defined INTEL
              "\
                mfence                           \n\
                rdtsc                            \n\
                shl      $32, %%rdx              \n\
                orq      %%rax, %%rdx            \n\
                movq     %%rdx, %[prev]"
-#elif AMD
+#elif defined AMD
              "\
                lfence                           \n\
                rdtsc                            \n\

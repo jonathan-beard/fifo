@@ -11,20 +11,53 @@
 #include <fstream>
 #include "randomstring.tcc"
 #include "signalvars.hpp"
-#include <cassert>
-
-#define MAX_VAL 1e6
-
-
 
 struct Data
 {
-   Data( std::int64_t send ) : send_count(  send )
+   Data( size_t send ) : send_count(  send )
    {}
    std::int64_t          send_count;
-} data( MAX_VAL );
+} data( 1e2 );
 
+#define SIZE 65536
 
+struct TestData
+{
+	TestData()
+	{
+		std::memset( all, 'a', SIZE - 1 );
+		all[ SIZE - 1 ] = '\0';
+	}
+
+	TestData( const TestData &other )
+	{
+		for( int i = 0; i < SIZE; i++ )
+		{
+			all[ i ] = other.all[ i ];
+		}
+	}
+
+	void operator = ( const TestData &other )
+	{
+		for( int i = 0; i < SIZE; i++ )
+		{
+			all[ i ] = other.all[ i ];
+		}
+	}
+	
+	bool operator == ( const TestData &other )
+	{
+		for( int i = 0; i < SIZE; i++ )
+		{
+			if( all[i] != other.all[i] )
+			{
+				return( false );
+			}
+		}
+		return( true );
+	}
+		char all[ SIZE ];
+} __attribute__(( aligned( 32 )));
 //#define USESharedMemory 1
 #define USELOCAL 1
 #define BUFFSIZE 100
@@ -32,9 +65,7 @@ struct Data
 #ifdef USESharedMemory
 typedef RingBuffer< std::int64_t, RingBufferType::SharedMemory, BUFFSIZE > TheBuffer;
 #elif defined USELOCAL
-typedef RingBuffer< std::int64_t /* buffer type */,
-                    RingBufferType::Heap /* allocation type */,
-                    true /* turn on monitoring */ >  TheBuffer;
+typedef RingBuffer< TestData >  TheBuffer;
 #endif
 
 
@@ -45,36 +76,32 @@ void
 producer( Data &data, TheBuffer &buffer )
 {
    std::int64_t current_count( 0 );
-   const double service_time( 10.0e-6 );
+   TestData d;
    while( current_count++ < data.send_count )
    {
-      auto &ref( buffer.allocate() );
-      ref = current_count;
-      buffer.push( /* current_count, */ 
+      buffer.push( d , 
          (current_count == data.send_count ? 
           RBSignal::RBEOF : RBSignal::RBNONE ) );
-      const auto stop_time( system_clock->getTime() + service_time );
-      while( system_clock->getTime() < stop_time );
    }
    return;
 }
-
 void 
 consumer( Data &data , TheBuffer &buffer )
 {
-   std::int64_t   current_count( 0 );
-   const double service_time( 5.0e-6 );
+   TestData test_object;
    while( buffer.get_signal() != RBSignal::RBEOF )
    {
-      buffer.pop( current_count );
-      const auto stop_time( system_clock->getTime() + service_time );
-      while( system_clock->getTime() < stop_time );
+      auto current_count = buffer.pop();
+      if( ! (test_object == current_count) )
+      {
+      	std::cerr << "Not equal, current value is: \n";
+      	std::cerr << current_count.all << "\n";
+      }
    }
-   assert( current_count == MAX_VAL );
    return;
 }
 
-std::string test()
+void test()
 {
 #ifdef USESharedMemory
    char shmkey[ 256 ];
@@ -113,10 +140,7 @@ std::string test()
 #endif
    a.join();
    b.join();
-   auto &monitor_data( buffer.getQueueData() );
-   std::stringstream ss;
-   Monitor::QueueData::print( monitor_data, Monitor::QueueData::Bytes, ss, true);
-   return( ss.str() );
+
 }
 
 
@@ -135,7 +159,7 @@ main( int argc, char **argv )
    int runs( 1 );
    while( runs-- )
    {
-       std::cout << test() << "\n";
+       test();
    }
    //ofs.close();
    if( system_clock != nullptr ) 
