@@ -478,7 +478,7 @@ public:
       }
       
 	const size_t write_index( Pointer::val( data->write_pt ) );
-#if  0 
+#if  0 //TODO, fix the byte dropping issue at the end of the write
 	rb_write( (unsigned char *)&(data->store[write_index].item), 
 		       (unsigned char *)&item, 
              sizeof(T), 
