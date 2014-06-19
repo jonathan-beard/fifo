@@ -39,7 +39,7 @@ namespace Buffer
 template < class X > struct Element
 {
    /** default constructor **/
-   Element() : signal( RBSignal::RBNONE )
+   Element() : signal( RBSignal::NONE )
    {
    }
    /**

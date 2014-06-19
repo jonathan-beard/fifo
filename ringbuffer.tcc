@@ -269,7 +269,7 @@ protected:
           */
          if( write_copy.blocked == 0 && 
                arrival_started  && 
-               buffer.signal_mask == RBSignal::RBNONE )
+               buffer.signal_mask == RBSignal::NONE )
          {
             data.items_arrived += write_copy.count;
             data.arrived_samples++;

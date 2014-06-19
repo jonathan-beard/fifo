@@ -379,7 +379,7 @@ public:
    RBSignal get_signal()
    {
       const auto out( signal_mask );
-      //signal_mask = RBSignal::RBNONE;
+      //signal_mask = RBSignal::NONE;
       return( out ); 
    }
    
@@ -439,9 +439,9 @@ public:
     * push - releases the last item allocated by allocate() to
     * the queue.  Function will imply return if allocate wasn't
     * called prior to calling this function.
-    * @param signal - const RBSignal signal, default: RBNONE
+    * @param signal - const RBSignal signal, default: NONE
     */
-   void push( const RBSignal signal = RBSignal::RBNONE )
+   void push( const RBSignal signal = RBSignal::NONE )
    {
       if( ! (this)->allocate_called ) return;
       const size_t write_index( Pointer::val( data->write_pt ) );
@@ -457,7 +457,7 @@ public:
     * until there is enough space.
     * @param   item, T
     */
-   void  push( T &item, const RBSignal signal = RBSignal::RBNONE )
+   void  push( T &item, const RBSignal signal = RBSignal::NONE )
    {
       while( space_avail() == 0 )
       {
@@ -504,7 +504,7 @@ public:
    template< class iterator_type >
    void insert(   iterator_type begin, 
                   iterator_type end, 
-                  const RBSignal signal = RBSignal::RBNONE )
+                  const RBSignal signal = RBSignal::NONE )
    {
       while( begin != end )
       {
@@ -530,7 +530,7 @@ public:
             }
             else
             {
-               data->store[ write_index ].signal = RBSignal::RBNONE;
+               data->store[ write_index ].signal = RBSignal::NONE;
             }
             Pointer::inc( data->write_pt );
             write_stats.all++;
@@ -750,9 +750,9 @@ public:
     * push - releases the last item allocated by allocate() to
     * the queue.  Function will imply return if allocate wasn't
     * called prior to calling this function.
-    * @param signal - const RBSignal signal, default: RBNONE
+    * @param signal - const RBSignal signal, default: NONE
     */
-   void push( const RBSignal signal = RBSignal::RBNONE )
+   void push( const RBSignal signal = RBSignal::NONE )
    {
       if( ! (this)->allocate_called ) return;
       data->store[ 0 ].signal = signal;
@@ -765,7 +765,7 @@ public:
     * increment the counter and simply return;
     * @param   item, T
     */
-   void  push( T &item, const RBSignal signal = RBSignal::RBNONE )
+   void  push( T &item, const RBSignal signal = RBSignal::NONE )
    {
       data->store[ 0 ].item   = item;
       /** a bit awkward since it gives the same behavior as the actual queue **/
@@ -782,7 +782,7 @@ public:
    template< class iterator_type >
    void insert( iterator_type begin, 
                 iterator_type end, 
-                const RBSignal signal = RBSignal::RBNONE )
+                const RBSignal signal = RBSignal::NONE )
    {
       while( begin != end )
       {
