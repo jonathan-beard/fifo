@@ -630,7 +630,8 @@ public:
     * or some other structure.
     */
    template< size_t N >
-   void  pop_range( std::array< T, N > &output, RBSignal *signal = nullptr )
+   void  pop_range( std::array< T, N > &output, 
+                    std::array< RBSignal, N > *signal = nullptr )
    {
       while( size() < N )
       {
@@ -644,24 +645,29 @@ public:
       }
      
       size_t read_index;
-      for( size_t i( 0 ); i < N; i++ )
+      if( signal != nullptr )
       {
-         read_index( Pointer::val( data->read_pt ) );
-         output[ i ] = data->store[ read_index ].item;
-         if( i != (N - 1 ) )
+         for( size_t i( 0 ); i < N; i++ )
          {
+            read_index( Pointer::val( data->read_pt ) );
+            output[ i ]    = data->store[ read_index ].item;
+            (*signal)[ i ]  = data->store[ read_index ].signal;
             Pointer::inc( data->read_pt );
             read_stats.count++;
          }
       }
-      /** TODO, perhaps might be better to consume all signals **/
-      if( signal != nullptr )
+      else /** ignore signal **/
       {
-         *signal = data->store[ read_index ].signal;
+         for( size_t i( 0 ); i < N; i++ )
+         {
+            read_index( Pointer::val( data->read_pt ) );
+            output[ i ]    = data->store[ read_index ].item;
+            Pointer::inc( data->read_pt );
+            read_stats.count++;
+         }
+
       }
-      Pointer::inc( data->read_pt );
-      read_stats.count++;
-      return( output );
+      return;
    }
 
 
@@ -861,15 +867,24 @@ public:
     * @param output - std:;array< T, N >*
     */
    template< size_t N >
-   void  pop_range( std::array< T, N > &output, RBSignal *signal = nullptr )
+   void  pop_range( 
+      std::array< T, N > &output, 
+      std::array< RBSignal, N > *signal = nullptr )
    {
-      for( size_t i( 0 ); i < N; i++ )
-      {
-         output[ i ] = data->store[ 0 ].item;
-      }
       if( signal != nullptr )
       {
-         *signal = data->store[ 0 ].signal;
+         for( size_t i( 0 ); i < N; i++ )
+         {
+            output[ i ]    = data->store[ 0 ].item;
+            (*signal)[ i ]  = data->store[ 0 ].signal;
+         }
+      }
+      else
+      {
+         for( size_t i( 0 ); i < N; i++ )
+         {
+            output[ i ]    = data->store[ 0 ].item;
+         }
       }
    }
 
