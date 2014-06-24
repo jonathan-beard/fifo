@@ -32,9 +32,9 @@ struct Data
 #ifdef USESharedMemory
 typedef RingBuffer< std::int64_t, RingBufferType::SharedMemory, BUFFSIZE > TheBuffer;
 #elif defined USELOCAL
-typedef RingBuffer< std::int64_t /* buffer type */,
-                    RingBufferType::Heap /* allocation type */,
-                    true /* turn on monitoring */ >  TheBuffer;
+typedef RingBuffer< std::int64_t          /* buffer type */,
+                    RingBufferType::Heap  /* allocation type */,
+                    true                  /* turn on monitoring */ >  TheBuffer;
 #endif
 
 
