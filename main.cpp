@@ -13,7 +13,7 @@
 #include "signalvars.hpp"
 #include <cassert>
 
-#define MAX_VAL 1e6
+#define MAX_VAL 100000
 
 
 
@@ -52,7 +52,7 @@ producer( Data &data, TheBuffer &buffer )
       ref = current_count;
       buffer.push( /* current_count, */ 
          (current_count == data.send_count ? 
-          RBSignal::RBEOF : RBSignal::RBNONE ) );
+          RBSignal::RBEOF : RBSignal::NONE ) );
       const auto stop_time( system_clock->getTime() + service_time );
       while( system_clock->getTime() < stop_time );
    }
@@ -132,7 +132,7 @@ main( int argc, char **argv )
    //   std::cerr << "Couldn't open ofstream!!\n";
    //   exit( EXIT_FAILURE );
    //}
-   int runs( 20 );
+   int runs( 2 );
    while( runs-- )
    {
        std::cout << test() << "\n";

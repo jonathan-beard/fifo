@@ -193,8 +193,12 @@ enum feature_levels get_highest_feature (unsigned int max_level)
 			jge	loop128%=		\n\
 			jmp	l8ctl%=			\n\*/
 
-inline void rb_write (unsigned char *dstp, unsigned char *srcp, 
-	size_t size, char feature_level)
+inline 
+void 
+rb_write( unsigned char *dstp, 
+          unsigned char *srcp, 
+	       size_t size, 
+          char feature_level )
 {
 	__asm__ volatile("\
 			movq	%[in], %%rax		\n\
@@ -202,7 +206,11 @@ inline void rb_write (unsigned char *dstp, unsigned char *srcp,
 			cmpb	$1, %[fl]		\n\
 			jl	l8ctl%=			\n\
 			je	l32ctl%=		\n\
-			jmp 	l64ctl%=		\n\
+			movq	%%rbx, %%rdx		\n\
+			andq	$15, %%rdx		\n\
+			cmpq	$0, %%rdx		\n\
+			je	l64ctl%=		\n\
+			jmp 	l64uctl%=		\n\
 		loop64%=:				\n\
 			movdqu	(%%rax), %%xmm0		\n\
 			movdqu	16(%%rax), %%xmm1	\n\
@@ -219,6 +227,30 @@ inline void rb_write (unsigned char *dstp, unsigned char *srcp,
 			cmpq	$64, %[SIZE]		\n\
 			jge	loop64%=		\n\
 			jmp	l32ctl%=		\n\
+		loop64unalign%=:			\n\
+			movq	(%%rax), %%mm0		\n\
+			movq	8(%%rax), %%mm1		\n\
+			movq	16(%%rax), %%mm2	\n\
+			movq	24(%%rax), %%mm3	\n\
+			movq	32(%%rax), %%mm4	\n\
+			movq	40(%%rax), %%mm5	\n\
+			movq	48(%%rax), %%mm6	\n\
+			movq	56(%%rax), %%mm7	\n\
+			movntq	%%mm0, (%%rbx)		\n\
+			movntq	%%mm1, 8(%%rbx)		\n\
+			movntq	%%mm2, 16(%%rbx)	\n\
+			movntq	%%mm3, 24(%%rbx)	\n\
+			movntq	%%mm4, 32(%%rbx)	\n\
+			movntq	%%mm5, 40(%%rbx)	\n\
+			movntq	%%mm6, 48(%%rbx)	\n\
+			movntq	%%mm7, 56(%%rbx)	\n\
+			addq	$64, %%rax		\n\
+			addq	$64, %%rbx		\n\
+			subq	$64, %[SIZE]		\n\
+			l64uctl%=:			\n\
+			cmpq	$64, %[SIZE]		\n\
+			jge	loop64unalign%=		\n\
+			jmp 	l32ctl%=		\n\
 		loop32%=:				\n\
 			movq	(%%rax), %%mm0		\n\
 			movq	8(%%rax), %%mm1		\n\
@@ -298,7 +330,8 @@ public:
     * data structures.
     */
    RingBufferBase() : data( nullptr ),
-   		      feature_level( 0 ),
+                      signal_mask( RBSignal::NONE ),
+   		             feature_level( 0 ),
                       allocate_called( false )
    {
 #if(__i386__ == 1 || __x86_64 == 1)
@@ -446,7 +479,6 @@ public:
       if( ! (this)->allocate_called ) return;
       const size_t write_index( Pointer::val( data->write_pt ) );
       data->store[ write_index ].signal = signal;
-      
       Pointer::inc( data->write_pt );
       write_stats.all++;
       (this)->allocate_called = false;
@@ -478,7 +510,7 @@ public:
       }
       
 	const size_t write_index( Pointer::val( data->write_pt ) );
-#if  0 //TODO, fix the byte dropping issue at the end of the write
+#if  __x86_64 
 	rb_write( (unsigned char *)&(data->store[write_index].item), 
 		       (unsigned char *)&item, 
              sizeof(T), 
@@ -681,6 +713,7 @@ public:
     * data structures.
     */
    RingBufferBase() : data( nullptr ),
+                      signal_mask( RBSignal::NONE ),
                       allocate_called( false )
    {
    }
