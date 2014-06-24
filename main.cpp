@@ -64,9 +64,10 @@ consumer( Data &data , TheBuffer &buffer )
 {
    std::int64_t   current_count( 0 );
    const double service_time( 5.0e-6 );
-   while( buffer.get_signal() != RBSignal::RBEOF )
+   RBSignal signal( RBSignal::NONE );
+   while( signal != RBSignal::RBEOF )
    {
-      buffer.pop( current_count );
+      buffer.pop( current_count, &signal );
       const auto stop_time( system_clock->getTime() + service_time );
       while( system_clock->getTime() < stop_time );
    }

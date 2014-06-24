@@ -331,7 +331,8 @@ public:
     */
    RingBufferBase() : data( nullptr ),
    		             feature_level( 0 ),
-                      allocate_called( false )
+                      allocate_called( false ),
+                      write_finished( false )
    {
 #if(__i386__ == 1 || __x86_64 == 1)
 	/** set cpuid feature level **/
@@ -471,6 +472,10 @@ public:
       data->store[ write_index ].signal = signal;
       Pointer::inc( data->write_pt );
       write_stats.all++;
+      if( signal == RBSignal::RBEOF )
+      {
+         (this)->write_finished = true;
+      }
       (this)->allocate_called = false;
    }
 
@@ -499,22 +504,26 @@ public:
 #endif           
       }
       
-	const size_t write_index( Pointer::val( data->write_pt ) );
-   /**
-    * TODO, there's an issue with writing to the signal var after
-    * certain offsets of T when using the rb_write method.
-    */
+	   const size_t write_index( Pointer::val( data->write_pt ) );
+      /**
+       * TODO, there's an issue with writing to the signal var after
+       * certain offsets of T when using the rb_write method.
+       */
 #if 0  
-	rb_write( (unsigned char *)&(data->store[write_index].item), 
-		       (unsigned char *)&item, 
-             sizeof(T), 
-             feature_level );
+	   rb_write( (unsigned char *)&(data->store[write_index].item), 
+	   	       (unsigned char *)&item, 
+                sizeof(T), 
+                feature_level );
 #else      
-	data->store[ write_index ].item     = item;
+	   data->store[ write_index ].item     = item;
 #endif
-	data->store[ write_index ].signal   = signal;
-	Pointer::inc( data->write_pt );
-	write_stats.all++;
+	   data->store[ write_index ].signal   = signal;
+	   Pointer::inc( data->write_pt );
+	   write_stats.all++;
+      if( signal == RBSignal::RBEOF )
+      {
+         (this)->write_finished = true;
+      }
    }
    
    /**
@@ -562,6 +571,10 @@ public:
             write_stats.all++;
             begin++;
          }
+      }
+      if( signal == RBSignal::RBEOF )
+      {
+         (this)->write_finished = true;
       }
    }
 
@@ -698,6 +711,7 @@ protected:
    volatile Blocked             write_stats;
    volatile std::uint8_t        feature_level;
    volatile bool                allocate_called;
+   volatile bool                write_finished;
 };
 
 
@@ -712,7 +726,8 @@ public:
     * data structures.
     */
    RingBufferBase() : data( nullptr ),
-                      allocate_called( false )
+                      allocate_called( false ),
+                      write_finished( false )
    {
    }
    
@@ -886,8 +901,10 @@ public:
 protected:
    /** go ahead and allocate a buffer as a heap, doesn't really matter **/
    Buffer::Data< T, RingBufferType::Heap >      *data;
+   /** note, these need to get moved into the data struct **/
    volatile Blocked                             read_stats;
    volatile Blocked                             write_stats;
    volatile bool                                allocate_called;
+   volatile bool                                write_finished;
 };
 #endif /* END _RINGBUFFERBASE_TCC_ */

@@ -83,7 +83,10 @@ namespace Monitor
                                       Units unit )
       {
          
-         
+         if( qd.arrived_samples == 0 )
+         {
+            return( 0.0 );
+         }
          return( ( ((double)qd.items_arrived * (double)qd.item_unit) / 
                      (qd.sample_frequency * (double)qd.arrived_samples ) ) * 
                         (double)unit_conversion[ unit ] );
@@ -92,6 +95,10 @@ namespace Monitor
       static double get_departure_rate( volatile QueueData &qd, 
                                         Units unit )
       {
+         if( qd.departed_samples == 0 )
+         {
+            return( 0.0 );
+         }
          return( ( ((double)qd.items_departed * (double)qd.item_unit) / 
                      (
                      qd.sample_frequency * (double)qd.departed_samples ) ) * 
@@ -105,10 +112,15 @@ namespace Monitor
 
       static double get_utilization( volatile QueueData &qd )
       {
+         const auto denom( 
+            QueueData::get_departure_rate( qd, Units::Bytes ) );
+         if( denom == 0 )
+         {
+            return( 0.0 );
+         }
          return( 
             QueueData::get_arrival_rate( qd, Units::Bytes ) / 
-            QueueData::get_departure_rate( qd, Units::Bytes ) ); 
-
+               denom );
       }
 
       static std::ostream& print( volatile QueueData &qd, 
@@ -268,8 +280,7 @@ protected:
           * record the throughput within this frame
           */
          if( write_copy.blocked == 0 && 
-               arrival_started  && 
-               buffer.signal_mask == RBSignal::NONE )
+               arrival_started  && ! buffer.write_finished ) 
          {
             data.items_arrived += write_copy.count;
             data.arrived_samples++;
