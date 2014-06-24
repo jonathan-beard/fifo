@@ -330,7 +330,6 @@ public:
     * data structures.
     */
    RingBufferBase() : data( nullptr ),
-                      signal_mask( RBSignal::NONE ),
    		             feature_level( 0 ),
                       allocate_called( false )
    {
@@ -395,14 +394,6 @@ public:
       return( 0 );
    }
 
-   /**
-    * send_signal - sends an asynchronous signal to the receiver.
-    * @param   sig - const RBSignal
-    */
-   void  send_signal( const RBSignal sig )
-   {
-      signal_mask = sig;
-   }
    
    /**
     * get_signal - returns a reference to the signal mask for this
@@ -411,9 +402,8 @@ public:
     */
    RBSignal get_signal()
    {
-      const auto out( signal_mask );
-      //signal_mask = RBSignal::NONE;
-      return( out ); 
+      const auto head( Pointer::val( data->read_pt ) );
+      return( data->store[ head ].signal ); 
    }
    
    /**
@@ -455,7 +445,7 @@ public:
          {   
             write_stats.blocked = 1;
          }
-#if __x86_64 
+#if __x86_64
          __asm__ volatile("\
            pause"
            :
@@ -500,7 +490,7 @@ public:
          {   
             write_stats.blocked = 1;
          }
-#if __x86_64 
+#if __x86_64
          __asm__ volatile("\
            pause"
            :
@@ -510,7 +500,11 @@ public:
       }
       
 	const size_t write_index( Pointer::val( data->write_pt ) );
-#if  __x86_64 
+   /**
+    * TODO, there's an issue with writing to the signal var after
+    * certain offsets of T when using the rb_write method.
+    */
+#if 0  
 	rb_write( (unsigned char *)&(data->store[write_index].item), 
 		       (unsigned char *)&item, 
              sizeof(T), 
@@ -578,7 +572,8 @@ public:
     * @return  T, item read.  It is removed from the
     *          q as soon as it is read
     */
-   void pop( T &item )
+   void 
+   pop( T &item, RBSignal *signal = nullptr )
    {
       while( size() == 0 )
       {
@@ -589,7 +584,7 @@ public:
          {   
             read_stats.blocked  = 1;
          }
-#if __x86_64 
+#if __x86_64
          __asm__ volatile("\
            pause"
            :
@@ -605,11 +600,13 @@ public:
        * read yet...this creates a nasty race condition if the
        * user isn't careful.
        */
-      signal_mask = output.signal;
+      if( signal != nullptr )
+      {
+         *signal = output.signal;
+      }
       item = output.item;
       Pointer::inc( data->read_pt );
       read_stats.all++;
-      return;
    }
 
    /**
@@ -620,7 +617,7 @@ public:
     * or some other structure.
     */
    template< size_t N >
-   void  pop_range( std::array< T, N > &output )
+   void  pop_range( std::array< T, N > &output, RBSignal *signal = nullptr )
    {
       while( size() < N )
       {
@@ -645,7 +642,10 @@ public:
          }
       }
       /** TODO, perhaps might be better to consume all signals **/
-      signal_mask = data->store[ read_index ].signal;
+      if( signal != nullptr )
+      {
+         *signal = data->store[ read_index ].signal;
+      }
       Pointer::inc( data->read_pt );
       read_stats.count++;
       return( output );
@@ -666,7 +666,7 @@ public:
 #ifdef NICE      
          std::this_thread::yield();
 #endif     
-#if   __x86_64        
+#if  __x86_64   
          __asm__ volatile("\
            pause"
            :
@@ -696,7 +696,6 @@ protected:
    Buffer::Data< T, type>      *data;
    volatile Blocked             read_stats;
    volatile Blocked             write_stats;
-   volatile RBSignal            signal_mask;
    volatile std::uint8_t        feature_level;
    volatile bool                allocate_called;
 };
@@ -713,7 +712,6 @@ public:
     * data structures.
     */
    RingBufferBase() : data( nullptr ),
-                      signal_mask( RBSignal::NONE ),
                       allocate_called( false )
    {
    }
@@ -732,15 +730,10 @@ public:
    {
       return( 1 );
    }
-   
-   void  send_signal( const RBSignal sig )
-   {
-      signal_mask = sig;
-   }
 
    RBSignal get_signal() 
    {
-      return( signal_mask );
+      return( data->store[ 0 ].signal );
    }
 
    /**
@@ -833,10 +826,13 @@ public:
     * @return  T, item read.  It is removed from the
     *          q as soon as it is read
     */
-   void pop( T &item )
+   void pop( T &item, RBSignal *signal = nullptr )
    {
       item  = data->store[ 0 ].item;
-      (this)->signal_mask = data->store[ 0 ].signal;
+      if( signal != nullptr )
+      {
+         *signal = data->store[ 0 ].signal;
+      }
       read_stats.count++;
    }
   
@@ -850,13 +846,16 @@ public:
     * @param output - std:;array< T, N >*
     */
    template< size_t N >
-   void  pop_range( std::array< T, N > &output )
+   void  pop_range( std::array< T, N > &output, RBSignal *signal = nullptr )
    {
       for( size_t i( 0 ); i < N; i++ )
       {
          output[ i ] = data->store[ 0 ].item;
       }
-      (this)->signal_mask = data->store[ 0 ].signal;
+      if( signal != nullptr )
+      {
+         *signal = data->store[ 0 ].signal;
+      }
    }
 
 
@@ -889,7 +888,6 @@ protected:
    Buffer::Data< T, RingBufferType::Heap >      *data;
    volatile Blocked                             read_stats;
    volatile Blocked                             write_stats;
-   volatile RBSignal                            signal_mask;
    volatile bool                                allocate_called;
 };
 #endif /* END _RINGBUFFERBASE_TCC_ */
