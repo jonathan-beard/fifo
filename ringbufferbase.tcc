@@ -712,11 +712,32 @@ public:
    }
 
 protected:
+   /**
+    * Buffer structure that is the core of the ring
+    * buffer.
+    */
    Buffer::Data< T, type>      *data;
+   /**
+    * these two should go inside the buffer, they'll
+    * be accessed via the monitoring system.
+    */
    volatile Blocked             read_stats;
    volatile Blocked             write_stats;
+   /**
+    * best left outside the buffer, could be different
+    * on the sending and receiving threads.  If thats the
+    * case then the var will be thread local and should
+    * work just fine outside.
+    */
    volatile std::uint8_t        feature_level;
+   /** 
+    * This should be okay outside of the buffer, its local 
+    * to the writing thread.  Variable gets set "true" in
+    * the allocate function and false when the push with
+    * only the signal argument is called.
+    */
    volatile bool                allocate_called;
+   /** TODO, this needs to get moved into the buffer for SHM **/
    volatile bool                write_finished;
 };
 

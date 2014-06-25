@@ -157,10 +157,10 @@ namespace Monitor
       std::uint64_t          items_departed;
       std::uint64_t          departed_samples;
       std::uint64_t          total_occupancy;
-      const size_t      item_unit;
+      const size_t           item_unit;
       std::uint64_t          samples;
-      const double      sample_frequency;
-      double            sample_time;
+      const double           sample_frequency;
+      double                 sample_time;
    };
 }
 
@@ -372,7 +372,7 @@ public:
    RingBuffer( const std::string key,
                Direction         dir,
                bool              multi_threaded_init = true,
-               const size_t      alignment = 8 ) : 
+               const size_t      alignment = 16 ) : 
                RingBufferBase< T, RingBufferType::SharedMemory >(),
                                               shm_key( key )
    {
