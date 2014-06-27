@@ -332,7 +332,8 @@ public:
    RingBufferBase() : data( nullptr ),
    		             feature_level( 0 ),
                       allocate_called( false ),
-                      write_finished( false )
+                      write_finished( false ),
+                      signal( RBSignal::NONE )
    {
 #if(__i386__ == 1 || __x86_64 == 1)
 	/** set cpuid feature level **/
@@ -403,10 +404,28 @@ public:
     */
    RBSignal get_signal()
    {
+      /** 
+       * there are two signalling paths, the one 
+       * we'll give the highest priority to is the 
+       * asynchronous one.
+       */
       const auto head( Pointer::val( data->read_pt ) );
-      return( data->store[ head ].signal ); 
+      const auto signal_queue( data->store[ head ].signal );
+      if( (this)->size() != 0 ) 
+      {
+         return( signal_queue );
+      }
+      /** there must be something in the local signal **/
+      const auto signal_local( (this)->signal );
+      (this)->signal = RBSignal::NONE;
+      return( signal_local );
    }
-   
+  
+   void send_signal( const RBSignal &signal )
+   {
+      (this)->signal = signal ;
+   }
+
    /**
     * space_avail - returns the amount of space currently
     * available in the queue.  This is the amount a user
@@ -739,6 +758,8 @@ protected:
    volatile bool                allocate_called;
    /** TODO, this needs to get moved into the buffer for SHM **/
    volatile bool                write_finished;
+   /** TODO, this needs to be moved into the buffer for SHM **/
+   volatile RBSignal            signal;
 };
 
 
@@ -754,7 +775,8 @@ public:
     */
    RingBufferBase() : data( nullptr ),
                       allocate_called( false ),
-                      write_finished( false )
+                      write_finished( false ),
+                      signal( RBSignal::NONE )
    {
    }
    
@@ -775,7 +797,25 @@ public:
 
    RBSignal get_signal() 
    {
-      return( data->store[ 0 ].signal );
+      /** 
+       * there are two signalling paths, the one 
+       * we'll give the highest priority to is the 
+       * asynchronous one.
+       */
+      const auto signal_queue( data->store[ 0 ].signal );
+      const auto signal_local( (this)->signal );
+      if( signal_local == RBSignal::NONE )
+      {
+         return( signal_queue );
+      }
+      /** there must be something in the local signal **/
+      (this)->signal = RBSignal::NONE;
+      return( signal_local );
+   }
+
+   void send_signal( const RBSignal &signal )
+   {
+      (this)->signal = signal;
    }
 
    /**
@@ -942,5 +982,6 @@ protected:
    volatile Blocked                             write_stats;
    volatile bool                                allocate_called;
    volatile bool                                write_finished;
+   volatile RBSignal                            signal;
 };
 #endif /* END _RINGBUFFERBASE_TCC_ */
