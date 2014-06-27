@@ -562,7 +562,7 @@ public:
    {
       while( begin != end )
       {
-         if( space_avail() == 0 )
+         while( space_avail() == 0 )
          {
 #ifdef NICE
             std::this_thread::yield();
@@ -572,24 +572,21 @@ public:
                write_stats.blocked = 1;
             }
          }
+         const size_t write_index( Pointer::val( data->write_pt ) );
+         data->store[ write_index ].item = (*begin);
+         
+         /** add signal to last el only **/
+         if( begin == ( end - 1 ) )
+         {
+            data->store[ write_index ].signal = signal;
+         }
          else
          {
-            const size_t write_index( Pointer::val( data->write_pt ) );
-            data->store[ write_index ].item = (*begin);
-            
-            /** add signal to last el only **/
-            if( begin == ( end - 1 ) )
-            {
-               data->store[ write_index ].signal = signal;
-            }
-            else
-            {
-               data->store[ write_index ].signal = RBSignal::NONE;
-            }
-            Pointer::inc( data->write_pt );
-            write_stats.all++;
-            begin++;
+            data->store[ write_index ].signal = RBSignal::NONE;
          }
+         Pointer::inc( data->write_pt );
+         write_stats.all++;
+         begin++;
       }
       if( signal == RBSignal::RBEOF )
       {
