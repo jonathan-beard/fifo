@@ -694,7 +694,7 @@ public:
     * removing.
     * @return T&
     */
-    T& peek()
+    T& peek(  RBSignal *signal = nullptr )
    {
       while( size() < 1 )
       {
@@ -710,6 +710,10 @@ public:
 #endif
       }
       const size_t read_index( Pointer::val( data->read_pt ) );
+      if( signal != nullptr )
+      {
+         *signal = data->store[ read_index ].signal;
+      }
       T &output( data->store[ read_index ].item );
       return( output );
    }
