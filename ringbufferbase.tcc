@@ -411,12 +411,13 @@ public:
        */
       const auto head( Pointer::val( data->read_pt ) );
       const auto signal_queue( data->store[ head ].signal );
-      if( (this)->size() != 0 ) 
+      const auto curr_size( (this)->size() );
+      if( curr_size > 0 ) 
       {
          return( signal_queue );
       }
       /** there must be something in the local signal **/
-      const auto signal_local( (this)->signal );
+      const RBSignal signal_local( (this)->signal );
       (this)->signal = RBSignal::NONE;
       return( signal_local );
    }

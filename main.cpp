@@ -12,8 +12,9 @@
 #include "randomstring.tcc"
 #include "signalvars.hpp"
 #include <cassert>
+#include <cinttypes>
 
-#define MAX_VAL 100000
+#define MAX_VAL 100
 
 
 
@@ -69,6 +70,7 @@ consumer( Data &data , TheBuffer &buffer )
    {
       buffer.pop( current_count, &signal );
       const auto stop_time( system_clock->getTime() + service_time );
+      fprintf( stdout, "%" PRIi64 "\n", current_count );
       while( system_clock->getTime() < stop_time );
    }
    assert( current_count == MAX_VAL );
