@@ -333,7 +333,8 @@ public:
    		             feature_level( 0 ),
                       allocate_called( false ),
                       write_finished( false ),
-                      signal( RBSignal::NONE )
+                      signal_a( RBSignal::NONE ),
+                      signal_b( RBSignal::NONE )
    {
 #if(__i386__ == 1 || __x86_64 == 1)
 	/** set cpuid feature level **/
@@ -417,14 +418,25 @@ public:
          return( signal_queue );
       }
       /** there must be something in the local signal **/
-      const RBSignal signal_local( (this)->signal );
-      (this)->signal = RBSignal::NONE;
-      return( signal_local );
+      struct{
+         RBSignal a;
+         RBSignal b;
+      }copy;
+      do
+      {
+         copy.a = (this)->signal_a;
+         copy.b = (this)->signal_b;
+      }while( copy.a != copy.b );
+
+      //(this)->signal_a = RBSignal::NONE;
+      //(this)->signal_b = RBSignal::NONE;
+      return( copy.b );
    }
   
    void send_signal( const RBSignal &signal )
    {
-      (this)->signal = signal ;
+      (this)->signal_a = signal ;
+      (this)->signal_b = signal ;
    }
 
    /**
@@ -761,7 +773,8 @@ protected:
    /** TODO, this needs to get moved into the buffer for SHM **/
    volatile bool                write_finished;
    /** TODO, this needs to be moved into the buffer for SHM **/
-   volatile RBSignal            signal;
+   volatile RBSignal            signal_a;
+   volatile RBSignal            signal_b;
 };
 
 
@@ -778,7 +791,8 @@ public:
    RingBufferBase() : data( nullptr ),
                       allocate_called( false ),
                       write_finished( false ),
-                      signal( RBSignal::NONE )
+                      signal_a( RBSignal::NONE ),
+                      signal_b( RBSignal::NONE )
    {
    }
    
@@ -805,13 +819,16 @@ public:
        * asynchronous one.
        */
       const auto signal_queue( data->store[ 0 ].signal );
-      const auto signal_local( (this)->signal );
+      /**
+       * TODO, fix this
+       */
+      const auto signal_local( (this)->signal_a );
       if( signal_local == RBSignal::NONE )
       {
          return( signal_queue );
       }
       /** there must be something in the local signal **/
-      (this)->signal = RBSignal::NONE;
+      //(this)->signal = RBSignal::NONE;
       return( signal_local );
    }
 
@@ -984,6 +1001,7 @@ protected:
    volatile Blocked                             write_stats;
    volatile bool                                allocate_called;
    volatile bool                                write_finished;
-   volatile RBSignal                            signal;
+   volatile RBSignal                            signal_a;
+   volatile RBSignal                            signal_b;
 };
 #endif /* END _RINGBUFFERBASE_TCC_ */
