@@ -31,6 +31,7 @@
 #include "ringbuffertypes.hpp"
 #include "bufferdata.tcc"
 #include "signalvars.hpp"
+#include "blocked.hpp"
 
 /**
  * Note: there is a NICE define that can be uncommented
@@ -42,8 +43,6 @@
 
 extern Clock *system_clock;
 
-typedef std::uint32_t blocked_part_t;
-typedef std::uint64_t blocked_whole_t;
 
 typedef struct {
      uint32_t
@@ -298,28 +297,6 @@ rb_write( unsigned char *dstp,
 			"xmm0", "xmm1", "xmm2", "xmm3",
 			"rax", "rbx", "rcx");	
 }
-
-/**
- * Blocked - simple data structure to combine the send count
- * and blocked flag in one simple structure.  Greatly improves
- * synchronization between cores.
- */
-union Blocked{
-   
-   Blocked() : all( 0 )
-   {}
-
-   Blocked( volatile Blocked &other )
-   {
-      all = other.all;
-   }
-
-   struct{
-      blocked_part_t  count;
-      blocked_part_t  blocked;
-   };
-   blocked_whole_t    all;
-} __attribute__ ((aligned( 8 )));
 
 
 template < class T, 

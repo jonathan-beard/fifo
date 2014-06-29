@@ -83,10 +83,10 @@ template < class T,
       store = nullptr;
    }
 
-   Pointer        read_pt;
-   Pointer        write_pt;
-   size_t         max_cap;
-   Element< T >  *store;
+   Pointer           read_pt;
+   Pointer           write_pt;
+   size_t            max_cap;
+   Element< T >      *store;
 };
 
 template < class T, 
