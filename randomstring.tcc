@@ -93,7 +93,7 @@ public:
    }
 
 private:
-   const size_t       length;
+   const int8_t       length;
    char               *source;
    gsl_rng            *r;
    const gsl_rng_type *t;
