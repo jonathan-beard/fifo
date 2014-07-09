@@ -377,7 +377,8 @@ public:
    
    /**
     * get_signal - returns a reference to the signal mask for this
-    * queue.
+    * queue. TODO this function won't necessarily work as advertised
+    * as it needs its own FIFO to deliver signals properly.
     * @return volatile RBSignal&
     */
    RBSignal get_signal()

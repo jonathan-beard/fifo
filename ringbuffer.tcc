@@ -87,7 +87,7 @@ namespace Monitor
          {
             return( 0.0 );
          }
-         return( ( ((double)qd.items_arrived * (double)qd.item_unit) / 
+         return( ( ((double)qd.items_arrived ) / 
                      (qd.sample_frequency * (double)qd.arrived_samples ) ) * 
                         (double)unit_conversion[ unit ] );
       }
@@ -99,7 +99,7 @@ namespace Monitor
          {
             return( 0.0 );
          }
-         return( ( ((double)qd.items_departed * (double)qd.item_unit) / 
+         return( ( ((double)qd.items_departed ) / 
                      (
                      qd.sample_frequency * (double)qd.departed_samples ) ) * 
                         (double)unit_conversion[ unit ] );
@@ -107,6 +107,10 @@ namespace Monitor
 
       static double get_mean_queue_occupancy( volatile QueueData &qd ) 
       {
+         if( qd.samples == 0 )
+         {
+            return( 0 );
+         }
          return( qd.total_occupancy / qd.samples );
       }
 
@@ -159,7 +163,7 @@ namespace Monitor
       std::uint64_t          total_occupancy;
       const size_t           item_unit;
       std::uint64_t          samples;
-      const double           sample_frequency;
+      double                 sample_frequency;
       double                 sample_time;
    };
 }
@@ -203,7 +207,7 @@ public:
 
 template< class T, 
           RingBufferType type > class RingBufferBaseMonitor : 
-   public RingBufferBase< T, type >
+            public RingBufferBase< T, type >
 {
 public:
    RingBufferBaseMonitor( const size_t n ) : 
@@ -258,58 +262,95 @@ protected:
                                volatile Monitor::QueueData     &data )
    {
       bool arrival_started( false );
-      while( ! term )
+      switch( type )
       {
-         const Blocked read_copy( buffer.read_stats );
-         const Blocked write_copy( buffer.write_stats );
-         buffer.read_stats.all = 0;
-         buffer.write_stats.all = 0;
-         const auto stop_time( data.sample_frequency + system_clock->getTime() );
-         if( ! arrival_started )
+         case( RingBufferType::Heap ):
          {
-            if( write_copy.count != 0 )
+            while( ! term )
             {
-               arrival_started = true;
-               std::this_thread::yield();
-               continue;
+               const Blocked read_copy( buffer.read_stats );
+               const Blocked write_copy( buffer.write_stats );
+               buffer.read_stats.all = 0;
+               buffer.write_stats.all = 0;
+               const auto stop_time( 
+                  data.sample_frequency + system_clock->getTime() );
+               if( ! arrival_started )
+               {
+                  if( write_copy.count != 0 )
+                  {
+                     arrival_started = true;
+                     std::this_thread::yield();
+                     continue;
+                  }
+               }
+               /**
+                * if we're not blocked, and the server has actually started
+                * and the end of data signal has not been received then 
+                * record the throughput within this frame
+                */
+               if( write_copy.blocked == 0 && 
+                     arrival_started  && ! buffer.write_finished ) 
+               {
+                  data.items_arrived += write_copy.count;
+                  data.arrived_samples++;
+               }
+               
+               /**
+                * if we're not blocked, and the server has actually started
+                * and the end of data signal has not been received then 
+                * record the throughput within this frame
+                */
+               if( read_copy.blocked == 0 )
+               {
+                  data.items_departed += read_copy.count;
+                  data.departed_samples++;
+               }
+
+               
+               data.total_occupancy += buffer.size();
+               data.samples         += 1;
+               while( system_clock->getTime() < stop_time  && ! term )
+               {
+#if __x86_64            
+                  __asm__ volatile("\
+                     pause"
+                     :
+                     :
+                     : );
+#endif               
+               }
             }
          }
-         /**
-          * if we're not blocked, and the server has actually started
-          * and the end of data signal has not been received then 
-          * record the throughput within this frame
-          */
-         if( write_copy.blocked == 0 && 
-               arrival_started  && ! buffer.write_finished ) 
+         break;
+         case( RingBufferType::Infinite ):
          {
-            data.items_arrived += write_copy.count;
-            data.arrived_samples++;
-         }
-         
-         /**
-          * if we're not blocked, and the server has actually started
-          * and the end of data signal has not been received then 
-          * record the throughput within this frame
-          */
-         if( read_copy.blocked == 0 )
-         {
-            data.items_departed += read_copy.count;
-            data.departed_samples++;
-         }
-
-         
-         data.total_occupancy += buffer.size();
-         data.samples         += 1;
-         while( system_clock->getTime() < stop_time  && ! term )
-         {
+            /**
+             * set departed_samples and arrived_samples to 1 so
+             * the multiplication above works out for the infinite
+             * queue.
+             */
+            data.departed_samples = 1;
+            data.arrived_samples  = 1;
+            const auto start_time( system_clock->getTime() );
+            while( ! term )
+            {
 #if __x86_64            
-            __asm__ volatile("\
-               pause"
-               :
-               :
-               : );
+                  __asm__ volatile("\
+                     pause"
+                     :
+                     :
+                     : );
 #endif               
+               const auto end_time(   system_clock->getTime() );
+               data.items_arrived   = buffer.write_stats.count;
+               data.items_departed  = buffer.read_stats.count;
+               /** set sample frequency to time diff **/
+               data.sample_frequency = ( end_time - start_time );
+            }
          }
+         break;
+         default:
+            assert( false );
       }
    }
    
