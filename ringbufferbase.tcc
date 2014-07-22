@@ -954,9 +954,13 @@ public:
     * removing.
     * @return T&
     */
-    T& peek()
+   T& peek(  RBSignal *signal = nullptr )
    {
       T &output( data->store[ 0 ].item );
+      if( signal != nullptr )
+      {
+         *signal = data->store[  0  ].signal;
+      }
       return( output );
    }
    
