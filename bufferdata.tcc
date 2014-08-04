@@ -52,12 +52,12 @@ template < class X > struct Element
    Element( const Element< X > &other )
    {
       (this)->item   = other.item;
-      (this)->signal = other.signal;
    }
 
    X item;
-   RBSignal signal;
-} __attribute__((aligned(32)));
+};
+
+
 
 template < class T, 
            RingBufferType B = RingBufferType::Heap, 
@@ -87,6 +87,7 @@ template < class T,
    Pointer           write_pt;
    size_t            max_cap;
    Element< T >      *store;
+   RBSignal          *signal;
 };
 
 template < class T, 
@@ -113,7 +114,8 @@ template < class T,
       volatile uint32_t a;
       volatile uint32_t b;
    }       cookie;
-   Element< T >       store[ SIZE ];
+   Element< T >       store[  SIZE ];
+   RBSignal           signal[ SIZE ];
 };
 }
 #endif /* END _BUFFERDATA_TCC_ */

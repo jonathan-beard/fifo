@@ -14,7 +14,7 @@
 #include <cassert>
 #include <cinttypes>
 
-#define MAX_VAL 1000000
+#define MAX_VAL 10000
 
 
 
@@ -34,7 +34,7 @@ struct Data
 typedef RingBuffer< std::int64_t, RingBufferType::SharedMemory, BUFFSIZE > TheBuffer;
 #elif defined USELOCAL
 typedef RingBuffer< std::int64_t          /* buffer type */,
-                    RingBufferType::Infinite  /* allocation type */,
+                    RingBufferType::Heap  /* allocation type */,
                     true                  /* turn on monitoring */ >  TheBuffer;
 #endif
 
