@@ -77,22 +77,24 @@ template < class T,
 {
 
 
-   Data( size_t max_cap ) : read_pt( max_cap ),
-                            write_pt( max_cap ),
-                            max_cap( max_cap ),
-                            store( nullptr ),
-                            signal( nullptr )
+   Data( size_t max_cap , const size_t align = 16 ) : read_pt( max_cap ),
+                                                      write_pt( max_cap ),
+                                                      max_cap( max_cap ),
+                                                      store( nullptr ),
+                                                      signal( nullptr )
    {
       const auto length_store( ( sizeof( Element< T > ) * max_cap ) ); 
       const auto length_signal( ( sizeof( Signal ) * max_cap ) );
-      errno = 0;
-      (this)->store  =(Element< T >*) calloc( length_store, 
-                                              sizeof( Element< T > ) );
-      if( (this)->store == nullptr )
+      int ret_val( posix_memalign( (void**)&((this)->store), 
+                                   align, 
+                                   length_store ) );
+      if( ret_val != 0 )
       {
-         perror( "Failed to allocate store!" );
+         std::cerr << "posix_memalign returned error code (" << ret_val << ")";
+         std::cerr << " with message: \n" << strerror( ret_val ) << "\n";
          exit( EXIT_FAILURE );
       }
+      
       errno = 0;
       (this)->signal = (Signal*)       calloc( length_signal,
                                                sizeof( Signal ) );
