@@ -200,7 +200,7 @@ public:
       }
       (this)->allocate_called = true;
       const size_t write_index( Pointer::val( data->write_pt ) );
-      return( data->store[ write_index ] );
+      return( data->store[ write_index ].item );
    }
 
    /**
@@ -213,7 +213,7 @@ public:
    {
       if( ! (this)->allocate_called ) return;
       const size_t write_index( Pointer::val( data->write_pt ) );
-      data->signal[ write_index ] = signal;
+      data->signal[ write_index ].sig = signal;
       Pointer::inc( data->write_pt );
       write_stats.all++;
       if( signal == RBSignal::RBEOF )
@@ -249,8 +249,8 @@ public:
       }
       
 	   const size_t write_index( Pointer::val( data->write_pt ) );
-	   data->store[ write_index ]     = item;
-	   data->signal[ write_index ]   = signal;
+	   data->store[ write_index ].item     = item;
+	   data->signal[ write_index ].sig   = signal;
 	   Pointer::inc( data->write_pt );
 	   write_stats.all++;
       if( signal == RBSignal::RBEOF )
@@ -287,16 +287,16 @@ public:
             }
          }
          const size_t write_index( Pointer::val( data->write_pt ) );
-         data->store[ write_index ] = (*begin);
+         data->store[ write_index ].item = (*begin);
          
          /** add signal to last el only **/
          if( begin == ( end - 1 ) )
          {
-            data->signal[ write_index ] = signal;
+            data->signal[ write_index ].sig = signal;
          }
          else
          {
-            data->signal[ write_index ] = RBSignal::NONE;
+            data->signal[ write_index ].sig = RBSignal::NONE;
          }
          Pointer::inc( data->write_pt );
          write_stats.all++;
@@ -336,18 +336,11 @@ public:
 #endif           
       }
       const size_t read_index( Pointer::val( data->read_pt ) );
-      Buffer::Element< T > &output( data->store[ read_index ] );
-      /**
-       * TODO, fix signalling here.  This shouldn't write over
-       * previously received signals that the consumer hasn't 
-       * read yet...this creates a nasty race condition if the
-       * user isn't careful.
-       */
       if( signal != nullptr )
       {
-         *signal = output.signal;
+         *signal = data->signal[ read_index ].sig;
       }
-      item = output.item;
+      item = data->store[ read_index ].item;
       Pointer::inc( data->read_pt );
       read_stats.all++;
    }
@@ -380,14 +373,15 @@ public:
          for( size_t i( 0 ); i < N; i++ )
          {
             read_index( Pointer::val( data->read_pt ) );
-            output[ i ]    = data->store[ read_index ].item;
-            (*signal)[ i ]  = data->store[ read_index ].signal;
+            output[ i ]       = data->store[ read_index ].item;
+            (*signal)[ i ]    = data->signal[ read_index ].sig;
             Pointer::inc( data->read_pt );
             read_stats.count++;
          }
       }
       else /** ignore signal **/
       {
+         /** TODO, incorporate streaming copy here **/
          for( size_t i( 0 ); i < N; i++ )
          {
             read_index( Pointer::val( data->read_pt ) );
@@ -426,7 +420,7 @@ public:
       const size_t read_index( Pointer::val( data->read_pt ) );
       if( signal != nullptr )
       {
-         *signal = data->store[ read_index ].signal;
+         *signal = data->signal[ read_index ].sig;
       }
       T &output( data->store[ read_index ].item );
       return( output );
@@ -466,9 +460,6 @@ protected:
    volatile bool                allocate_called;
    /** TODO, this needs to get moved into the buffer for SHM **/
    volatile bool                write_finished;
-   /** TODO, this needs to be moved into the buffer for SHM **/
-   volatile RBSignal            signal_a;
-   volatile RBSignal            signal_b;
 };
 
 
@@ -484,9 +475,7 @@ public:
     */
    RingBufferBase() : data( nullptr ),
                       allocate_called( false ),
-                      write_finished( false ),
-                      signal_a( RBSignal::NONE ),
-                      signal_b( RBSignal::NONE )
+                      write_finished( false )
    {
    }
    
@@ -507,6 +496,7 @@ public:
 
    RBSignal get_signal() 
    {
+#if 0   
       /** 
        * there are two signalling paths, the one 
        * we'll give the highest priority to is the 
@@ -523,12 +513,13 @@ public:
       }
       /** there must be something in the local signal **/
       //(this)->signal = RBSignal::NONE;
-      return( signal_local );
+#endif      
+      return( RBSignal::NONE );
    }
 
    void send_signal( const RBSignal &signal )
    {
-      (this)->signal = signal;
+      //(this)->signal = signal;
    }
 
    /**
@@ -576,7 +567,7 @@ public:
    void push( const RBSignal signal = RBSignal::NONE )
    {
       if( ! (this)->allocate_called ) return;
-      data->store[ 0 ].signal = signal;
+      data->signal[ 0 ].sig = signal;
       write_stats.all++;
       (this)->allocate_called = false;
    }
@@ -588,9 +579,9 @@ public:
     */
    void  push( T &item, const RBSignal signal = RBSignal::NONE )
    {
-      data->store[ 0 ].item   = item;
+      data->store [ 0 ].item  = item;
       /** a bit awkward since it gives the same behavior as the actual queue **/
-      data->store[ 0 ].signal = signal;
+      data->signal[ 0 ].sig  = signal;
       write_stats.count++;
    }
 
@@ -611,7 +602,7 @@ public:
          begin++;
          write_stats.count++;
       }
-      data->store[ 0 ].signal = signal;
+      data->signal[ 0 ].sig = signal;
    }
  
 
@@ -626,7 +617,7 @@ public:
       item  = data->store[ 0 ].item;
       if( signal != nullptr )
       {
-         *signal = data->store[ 0 ].signal;
+         *signal = data->signal[ 0 ].sig;
       }
       read_stats.count++;
    }
@@ -649,8 +640,8 @@ public:
       {
          for( size_t i( 0 ); i < N; i++ )
          {
-            output[ i ]    = data->store[ 0 ].item;
-            (*signal)[ i ]  = data->store[ 0 ].signal;
+            output[ i ]     = data->store [ 0 ].item;
+            (*signal)[ i ]  = data->signal[ 0 ].sig;
          }
       }
       else
@@ -675,7 +666,7 @@ public:
       T &output( data->store[ 0 ].item );
       if( signal != nullptr )
       {
-         *signal = data->store[  0  ].signal;
+         *signal = data->signal[  0  ].sig;
       }
       return( output );
    }
@@ -699,7 +690,5 @@ protected:
    volatile Blocked                             write_stats;
    volatile bool                                allocate_called;
    volatile bool                                write_finished;
-   volatile RBSignal                            signal_a;
-   volatile RBSignal                            signal_b;
 };
 #endif /* END _RINGBUFFERBASE_TCC_ */

@@ -39,7 +39,7 @@ namespace Buffer
 template < class X > struct Element
 {
    /** default constructor **/
-   Element() : signal( RBSignal::NONE )
+   Element()
    {
    }
    /**
@@ -57,7 +57,19 @@ template < class X > struct Element
    X item;
 };
 
+struct Signal
+{
+   Signal() : sig( RBSignal::NONE )
+   {
+   }
 
+   Signal( const Signal &other )
+   {
+      (this)->sig = other.sig;
+   }
+
+   RBSignal sig;
+};
 
 template < class T, 
            RingBufferType B = RingBufferType::Heap, 
@@ -69,37 +81,51 @@ template < class T,
                             write_pt( max_cap ),
                             max_cap( max_cap ),
                             store( nullptr ),
-                            signal( nullptr ),
-                            ptr( nullptr );
+                            signal( nullptr )
    {
-      errno = 0;
       const auto length_store( ( sizeof( Element< T > ) * max_cap ) ); 
-      const auto length_signal( ( sizeof( RBSignal ) * max_cap ) );
-      const auto ptr_size( length_store + length_signal );
-      (this)->ptr = (char*) calloc( ptr_size );
-      assert( (this)->ptr != nullptr );
-      (this)->store  = reinterpret_cast< Element< T >* >( ptr );
-      (this)->signal = reinterpret_cast< RBSignal* >( &( ptr[ length_store ] ));
+      const auto length_signal( ( sizeof( Signal ) * max_cap ) );
+      errno = 0;
+      (this)->store  =(Element< T >*) calloc( length_store, 
+                                              sizeof( Element< T > ) );
+      if( (this)->store == nullptr )
+      {
+         perror( "Failed to allocate store!" );
+         exit( EXIT_FAILURE );
+      }
+      errno = 0;
+      (this)->signal = (Signal*)       calloc( length_signal,
+                                               sizeof( Signal ) );
+      if( (this)->signal == nullptr )
+      {
+         perror( "Failed to allocate signal queue!" );
+         exit( EXIT_FAILURE );
+      }
    }
 
 
    ~Data()
    {
-      std::memset( store, 0, sizeof( Element< T > ) * max_cap );
-      delete( store );
-      store = nullptr;
+      std::memset( (this)->store, 0, ( sizeof( Element< T > ) * max_cap ) );
+      free( (this)->store );
+      std::memset( (this)->signal, 0, ( sizeof( Signal ) * max_cap ) );
+      free( (this)->signal );
    }
 
    Pointer           read_pt;
    Pointer           write_pt;
    size_t            max_cap;
-   Element< T >      *store;
-   RBSignal          *signal;
-   /**
-    * ptr is the location and main ptr to free
-    * when deallocating the store and signal ptrs.
+   /** 
+    * allocating these as structs gives a bit
+    * more flexibility later in what to pass
+    * along with the queue.  It'll be more 
+    * efficient copy wise to pass extra items
+    * in the signal, but conceivably there could
+    * be a case for adding items in the store
+    * as well.
     */
-   char              *ptr;
+   Element< T >      *store;
+   Signal            *signal;
 };
 
 template < class T, 
