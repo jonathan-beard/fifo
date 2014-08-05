@@ -26,12 +26,15 @@ struct Data
 } data( MAX_VAL );
 
 
-//#define USESharedMemory 1
-#define USELOCAL 1
+#define USESharedMemory 1
+//#define USELOCAL 1
 #define BUFFSIZE 100
 
 #ifdef USESharedMemory
-typedef RingBuffer< std::int64_t, RingBufferType::SharedMemory, BUFFSIZE > TheBuffer;
+typedef RingBuffer< std::int64_t, 
+                    RingBufferType::SharedMemory, 
+                    false,
+                    BUFFSIZE > TheBuffer;
 #elif defined USELOCAL
 typedef RingBuffer< std::int64_t          /* buffer type */,
                     RingBufferType::Heap  /* allocation type */,
@@ -80,20 +83,16 @@ std::string test()
 {
 #ifdef USESharedMemory
    char shmkey[ 256 ];
-   SharedMemory::GenKey( shmkey, 256 );
+   SHM::GenKey( shmkey, 256 );
    std::string key( shmkey );
-   
-   RingBuffer< std::int64_t, 
-               RingBufferType::SharedMemory, 
-               BUFFSIZE > buffer_a( key, 
-                                    Direction::Producer, 
-                                    false);
-   RingBuffer< std::int64_t, 
-              RingBufferType::SharedMemory, 
-              BUFFSIZE > buffer_b( key, 
-                                   Direction::Consumer, 
-                                   false);
+   TheBuffer buffer_a( key, 
+                       Direction::Producer, 
+                       false);
+   TheBuffer buffer_b( key, 
+                       Direction::Consumer, 
+                       false);
 
+/** TODO, write fork loop to really "test" the SHM **/
    std::thread a( producer, 
                   std::ref( data ), 
                   std::ref( buffer_a ) );
@@ -115,10 +114,10 @@ std::string test()
 #endif
    a.join();
    b.join();
-   auto &monitor_data( buffer.getQueueData() );
-   std::stringstream ss;
-   Monitor::QueueData::print( monitor_data, Monitor::QueueData::Bytes, ss, true);
-   return( ss.str() );
+   //auto &monitor_data( buffer.getQueueData() );
+   //std::stringstream ss;
+   //Monitor::QueueData::print( monitor_data, Monitor::QueueData::Bytes, ss, true);
+   return( "done" );
 }
 
 
