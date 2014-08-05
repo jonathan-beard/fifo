@@ -71,15 +71,32 @@ struct Signal
    RBSignal sig;
 };
 
+/**
+ * DataBase - not quite the best name since we 
+ * conjure up a relational database, but it is
+ * literally the base for the Data structs below.
+ */
+struct DataBase 
+{
+   DataBase( size_t max_cap ) : read_pt( max_cap ),
+                                write_pt( max_cap ),
+                                max_cap( max_cap )
+   {
+
+   }
+
+   Pointer           read_pt;
+   Pointer           write_pt;
+   size_t            max_cap;
+};
+
 template < class T, 
            RingBufferType B = RingBufferType::Heap, 
-           size_t SIZE = 0 > struct Data
+           size_t SIZE = 0 > struct Data : public DataBase
 {
 
 
-   Data( size_t max_cap , const size_t align = 16 ) : read_pt( max_cap ),
-                                                      write_pt( max_cap ),
-                                                      max_cap( max_cap ),
+   Data( size_t max_cap , const size_t align = 16 ) : DataBase( max_cap ),
                                                       store( nullptr ),
                                                       signal( nullptr )
    {
@@ -114,9 +131,6 @@ template < class T,
       free( (this)->signal );
    }
 
-   Pointer           read_pt;
-   Pointer           write_pt;
-   size_t            max_cap;
    /** 
     * allocating these as structs gives a bit
     * more flexibility later in what to pass
@@ -133,18 +147,13 @@ template < class T,
 template < class T, 
            size_t SIZE > struct Data< T, 
                                       RingBufferType::SharedMemory, 
-                                      SIZE >
+                                      SIZE > : public DataBase
 {
-   Data( size_t max_cap ) : read_pt( max_cap ),
-                            write_pt( max_cap ),
-                            max_cap( max_cap )
+   Data( size_t max_cap ) : DataBase( max_cap )
    {
 
    }
 
-   Pointer read_pt;
-   Pointer write_pt;
-   size_t  max_cap;
    struct  Cookie
    {
       Cookie() : a( 0 ),
