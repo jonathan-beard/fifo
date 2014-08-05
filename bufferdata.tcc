@@ -154,8 +154,9 @@ template < class T,
       volatile uint32_t a;
       volatile uint32_t b;
    }       cookie;
+
    Element< T >       store[  SIZE ];
-   RBSignal           signal[ SIZE ];
+   Signal             signal[ SIZE ];
 };
 }
 #endif /* END _BUFFERDATA_TCC_ */
