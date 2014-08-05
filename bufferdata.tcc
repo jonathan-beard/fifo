@@ -67,12 +67,19 @@ template < class T,
 
    Data( size_t max_cap ) : read_pt( max_cap ),
                             write_pt( max_cap ),
-                            max_cap( max_cap )
+                            max_cap( max_cap ),
+                            store( nullptr ),
+                            signal( nullptr ),
+                            ptr( nullptr );
    {
       errno = 0;
-      (this)->store = (Element< T >*) malloc( sizeof( Element< T >) * max_cap );
-      std::memset( store, 0, sizeof( Element< T > ) * max_cap );
-      assert( (this)->store != nullptr );
+      const auto length_store( ( sizeof( Element< T > ) * max_cap ) ); 
+      const auto length_signal( ( sizeof( RBSignal ) * max_cap ) );
+      const auto ptr_size( length_store + length_signal );
+      (this)->ptr = (char*) calloc( ptr_size );
+      assert( (this)->ptr != nullptr );
+      (this)->store  = reinterpret_cast< Element< T >* >( ptr );
+      (this)->signal = reinterpret_cast< RBSignal* >( &( ptr[ length_store ] ));
    }
 
 
@@ -88,6 +95,11 @@ template < class T,
    size_t            max_cap;
    Element< T >      *store;
    RBSignal          *signal;
+   /**
+    * ptr is the location and main ptr to free
+    * when deallocating the store and signal ptrs.
+    */
+   char              *ptr;
 };
 
 template < class T, 
