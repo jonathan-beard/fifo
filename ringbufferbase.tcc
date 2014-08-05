@@ -116,6 +116,7 @@ public:
     */
    RBSignal get_signal()
    {
+#if 0      
       /** 
        * there are two signalling paths, the one 
        * we'll give the highest priority to is the 
@@ -141,13 +142,13 @@ public:
 
       //(this)->signal_a = RBSignal::NONE;
       //(this)->signal_b = RBSignal::NONE;
-      return( copy.b );
+#endif
+      return( RBSignal::NONE );
    }
   
    void send_signal( const RBSignal &signal )
    {
-      (this)->signal_a = signal ;
-      (this)->signal_b = signal ;
+      //TODO, fixme
    }
 
    /**
