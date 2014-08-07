@@ -34,8 +34,7 @@ struct Data
 #ifdef USESharedMemory
 typedef RingBuffer< std::int64_t, 
                     RingBufferType::SharedMemory, 
-                    false,
-                    BUFFSIZE > TheBuffer;
+                    false > TheBuffer;
 #elif defined USELOCAL
 typedef RingBuffer< std::int64_t          /* buffer type */,
                     RingBufferType::Heap  /* allocation type */,
@@ -93,7 +92,8 @@ std::string test()
    {
       case( 0 /* CHILD */ ):
       {
-         TheBuffer buffer_b( key, 
+         TheBuffer buffer_b( BUFFSIZE,
+                             key, 
                              Direction::Consumer, 
                              false);
          /** call consumer function directly **/
@@ -109,7 +109,8 @@ std::string test()
       default: /* parent */
       {
          proc_wait->AddProcess( child );
-         TheBuffer buffer_a( key, 
+         TheBuffer buffer_a( BUFFSIZE,
+                             key, 
                              Direction::Producer, 
                              false);
          /** call producer directly **/

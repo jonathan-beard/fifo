@@ -219,7 +219,7 @@ template < class T > struct Data< T, RingBufferType::SharedMemory > : public Dat
       /** allocate memory for pointers **/
       try
       {
-         (this)->read_ptr = 
+         (this)->read_pt = 
             (Pointer*) SHM::Init( ptr_key.c_str(), (sizeof( Pointer ) * 2) + 
                                                     sizeof( Cookie ));
       }
@@ -227,15 +227,15 @@ template < class T > struct Data< T, RingBufferType::SharedMemory > : public Dat
       {
          try
          {
-            (this)->read_ptr = (Pointer*) SHM::Open( ptr_key.c_str() );
-            (this)->write_ptr = (this)->read_ptr[ 1 ];
+            (this)->read_pt  = (Pointer*) SHM::Open( ptr_key.c_str() );
+            (this)->write_pt = &(this)->read_pt[ 1 ];
             /** 
              * this will happen at least once for the SHM sections, 
              * might as well do it here
              */
             Pointer temp( max_cap );
-            std::memcpy( &(this)->data->read_pt,  &temp, sizeof( Pointer ) );
-            std::memcpy( &(this)->data->write_pt, &temp, sizeof( Pointer ) );
+            std::memcpy( &(this)->read_pt,  &temp, sizeof( Pointer ) );
+            std::memcpy( &(this)->write_pt, &temp, sizeof( Pointer ) );
          }
          catch( bad_shm_alloc &ex2 )
          {
@@ -244,10 +244,10 @@ template < class T > struct Data< T, RingBufferType::SharedMemory > : public Dat
             exit( EXIT_FAILURE );
          }
       }
-      assert( (this)->read_ptr   != nullptr );
-      assert( (this)->write_ptr  != nullptr );
+      assert( (this)->read_pt   != nullptr );
+      assert( (this)->write_pt  != nullptr );
       /** set the cookie **/
-      (this)->cookie = ((Cookie*) &(this)->read_ptr[ 2 ] );
+      (this)->cookie = ((Cookie*) &(this)->read_pt[ 2 ] );
       assert( (this)->cookie     != nullptr );
       switch( dir )
       {
@@ -262,7 +262,7 @@ template < class T > struct Data< T, RingBufferType::SharedMemory > : public Dat
             exit( EXIT_FAILURE );
             break;
       }
-      while( (this)->data->cookie.a != (this)->data->cookie.b )
+      while( (this)->cookie->a != (this)->cookie->b )
       {
          std::this_thread::yield();
       }
@@ -272,9 +272,21 @@ template < class T > struct Data< T, RingBufferType::SharedMemory > : public Dat
    ~Data()
    {
       /** three segments of SHM to close **/
-      SHM::Close( store_key, (void*) (this)->store, (this)->length_store, true, true ); 
-      SHM::Close( signal_key,(void*) (this)->signal,(this)->length_signal, true, true );
-      SHM::Close( ptr_key,   (void*) (this)->read_ptr, (sizeof( Pointer ) * 2) + sizeof( Cookie ), true, true );
+      SHM::Close( store_key.c_str(), 
+                  (void*) (this)->store, 
+                  (this)->length_store, 
+                  true, 
+                  true ); 
+      SHM::Close( signal_key.c_str(),
+                  (void*) (this)->signal,
+                  (this)->length_signal, 
+                  true, 
+                  true );
+      SHM::Close( ptr_key.c_str(),   
+                  (void*) (this)->read_pt, 
+                  (sizeof( Pointer ) * 2) + sizeof( Cookie ), 
+                  true, 
+                  true );
    }
 
    struct  Cookie

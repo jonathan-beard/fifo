@@ -281,7 +281,9 @@ public:
                RingBufferBase< T, RingBufferType::SharedMemory >(),
                                               shm_key( key )
    {
-      (this)->data = new Data< T, RingBufferType::SharedMemory >( nitems, key, dir, alignment );
+      (this)->data = 
+         new Buffer::Data< T, 
+                           RingBufferType::SharedMemory >( nitems, key, dir, alignment );
       assert( (this)->data != nullptr );
    }
 
