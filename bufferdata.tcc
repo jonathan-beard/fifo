@@ -244,8 +244,8 @@ template < class T > struct Data< T, RingBufferType::SharedMemory > : public Dat
             exit( EXIT_FAILURE );
          }
       }
-      assert( (this)->read_pt   != nullptr );
-      assert( (this)->write_pt  != nullptr );
+      //assert( (this)->read_pt   != nullptr );
+      //assert( (this)->write_pt  != nullptr );
       /** set the cookie **/
       (this)->cookie = ((Cookie*) &(this)->read_pt[ 2 ] );
       assert( (this)->cookie     != nullptr );

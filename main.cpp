@@ -121,7 +121,7 @@ std::string test()
    /** parent waits for child **/
    proc_wait->WaitForChildren();
 
-
+   delete( proc_wait );
    
 #elif defined USELOCAL
    TheBuffer buffer( BUFFSIZE );
