@@ -178,64 +178,67 @@ template < class T > struct Data< T, RingBufferType::SharedMemory > : public Dat
                                     ptr_key( shm_key + "_ptr" )
    {
       /** now work through opening SHM **/
-      try
+      switch( dir )
       {
-         (this)->store  = (Element< T >*) SHM::Init( store_key.c_str(), (this)->length_store );
-      }
-      catch( bad_shm_alloc &ex )
-      {
-         try
+         case( Producer ):
          {
-            (this)->store = (Element< T >*) SHM::Open( store_key.c_str() );
-         }
-         catch( bad_shm_alloc &ex2 )
-         {
-            std::cerr << "Error allocating SHM for store.\n";
-            std::cerr << ex2.what() << "\n";
-            exit( EXIT_FAILURE );
-         }
-      }
-      assert( (this)->store != nullptr );
-      /** allocate memory for signals **/
-      try
-      {
-         (this)->signal = (Signal*) 
-            SHM::Init( signal_key.c_str(), (this)->length_signal );
-      }
-      catch( bad_shm_alloc &ex )
-      {
-         try
-         {
-            (this)->signal = (Signal*) SHM::Open( signal_key.c_str() );
-         }
-         catch( bad_shm_alloc &ex2 )
-         {
-            std::cerr << "Error allocating SHM for signal queue.\n";
-            std::cerr << ex2.what() << "\n";
-            exit( EXIT_FAILURE );
-         }
-      }
-      assert( (this)->signal != nullptr );
-      
-      /** allocate memory for pointers **/
-      try
-      {
-         (this)->read_pt = 
-            (Pointer*) SHM::Init( ptr_key.c_str(), (sizeof( Pointer ) * 2) + 
-                                                    sizeof( Cookie ));
-         (this)->write_pt = &(this)->read_pt[ 1 ];
-         
-         assert( (this)->read_pt   != nullptr );
-         assert( (this)->write_pt  != nullptr );
-      }
-      catch( bad_shm_alloc &ex )
-      {
-         try
-         {
-            (this)->read_pt  = (Pointer*) SHM::Open( ptr_key.c_str() );
+            auto alloc_with_error = [&]( void **ptr, const size_t length, const char *key )
+            {
+               try
+               {
+                  *ptr = SHM::Init( key, length );
+               }catch( bad_shm_alloc &ex )
+               {
+                  std::cerr << "Bad SHM allocate for key (" << key << ") with length (" << length << ")\n";
+                  std::cerr << "Message: " << ex.what() << ", exiting.\n";
+                  exit( EXIT_FAILURE );
+               }
+            };
+            alloc_with_error( (void**)&(this)->store, (this)->length_store, store_key.c_str() );
+            alloc_with_error( (void**)&(this)->signal, (this)->length_signal, signal_key.c_str() );
+            alloc_with_error( (void**)&(this)->read_pt, (sizeof( Pointer ) * 2 ), ptr_key.c_str() );
             (this)->write_pt = &(this)->read_pt[ 1 ];
+         }
+         break;
+         case( Consumer ):
+         {
+            auto retry_func = [&]( void **ptr, const char *str )
+            {
+               std::string error_copy;
+               int timeout( 1000 );
+               while( timeout-- )
+               {
+                  try
+                  {
+                     *ptr = SHM::Open( str );
+                  }
+                  catch( bad_shm_alloc &ex )
+                  {
+                     //do nothing
+                     timeout--;
+                     error_copy = ex.what();
+                     continue;
+                  }
+                  goto SUCCESS;
+               }
+               /** timeout reached **/
+               std::cerr << "Failed to open shared memory for \"" << str << "\", exiting!!\n";
+               std::cerr << "Error message: " << error_copy << "\n";
+               exit( EXIT_FAILURE );
+               SUCCESS:;
+            };
+            retry_func( (void**) &(this)->store,  store_key.c_str() );
+            retry_func( (void**) &(this)->signal, signal_key.c_str() );
+            retry_func( (void**) &(this)->read_pt, ptr_key.c_str() );
+            
+            assert( (this)->store != nullptr );
+            assert( (this)->signal != nullptr );
             assert( (this)->read_pt   != nullptr );
+            
+            /** fix write_pt **/
+            (this)->write_pt  = &(this)->read_pt[ 1 ];
             assert( (this)->write_pt  != nullptr );
+            
             /** 
              * this will happen at least once for the SHM sections, 
              * might as well do it here
@@ -244,34 +247,13 @@ template < class T > struct Data< T, RingBufferType::SharedMemory > : public Dat
             std::memcpy( &(this)->read_pt,  &temp, sizeof( Pointer ) );
             std::memcpy( &(this)->write_pt, &temp, sizeof( Pointer ) );
          }
-         catch( bad_shm_alloc &ex2 )
+         break;
+         default:
          {
-            std::cerr << "Error allocating SHM for read/write ptrs.\n";
-            std::cerr << ex2.what() << "\n";
+            //TODO, add signal handler to cleanup
+            std::cerr << "Invalid direction, exiting\n";
             exit( EXIT_FAILURE );
          }
-      }
-      assert( (this)->read_pt   != nullptr );
-      assert( (this)->write_pt  != nullptr );
-      /** set the cookie **/
-      (this)->cookie = ((Cookie*) &(this)->read_pt[ 2 ] );
-      assert( (this)->cookie     != nullptr );
-      switch( dir )
-      {
-         case( Direction::Producer ):
-            (this)->cookie->a = 0x1337;
-            break;
-         case( Direction::Consumer ):
-            (this)->cookie->b = 0x1337;
-            break;
-         default:
-            std::cerr << "Unknown direction (" << dir << "), exiting!!\n";
-            exit( EXIT_FAILURE );
-            break;
-      }
-      while( (this)->cookie->a != (this)->cookie->b )
-      {
-         std::this_thread::yield();
       }
       /** should be all set now **/
    }
@@ -291,22 +273,10 @@ template < class T > struct Data< T, RingBufferType::SharedMemory > : public Dat
                   true );
       SHM::Close( ptr_key.c_str(),   
                   (void*) (this)->read_pt, 
-                  (sizeof( Pointer ) * 2) + sizeof( Cookie ), 
+                  (sizeof( Pointer ) * 2), 
                   true, 
                   true );
    }
-
-   struct  Cookie
-   {
-      Cookie() : a( 0 ),
-                 b( 0 )
-      {
-      }
-      volatile uint32_t a;
-      volatile uint32_t b;
-   };
-
-   Cookie *cookie;
 
    /** process local key copies **/
    const std::string store_key; 
