@@ -199,7 +199,8 @@ template < class T > struct Data< T, RingBufferType::SharedMemory > : public Dat
       /** allocate memory for signals **/
       try
       {
-         (this)->signal = (Signal*) SHM::Init( signal_key.c_str(), (this)->length_signal );
+         (this)->signal = (Signal*) 
+            SHM::Init( signal_key.c_str(), (this)->length_signal );
       }
       catch( bad_shm_alloc &ex )
       {
@@ -244,8 +245,8 @@ template < class T > struct Data< T, RingBufferType::SharedMemory > : public Dat
             exit( EXIT_FAILURE );
          }
       }
-      //assert( (this)->read_pt   != nullptr );
-      //assert( (this)->write_pt  != nullptr );
+      assert( (this)->read_pt   != nullptr );
+      assert( (this)->write_pt  != nullptr );
       /** set the cookie **/
       (this)->cookie = ((Cookie*) &(this)->read_pt[ 2 ] );
       assert( (this)->cookie     != nullptr );
