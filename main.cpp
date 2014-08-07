@@ -92,6 +92,7 @@ std::string test()
    {
       case( 0 /* CHILD */ ):
       {
+         std::cerr << "Child gets key: " << key << "\n";
          TheBuffer buffer_b( BUFFSIZE,
                              key, 
                              Direction::Consumer, 
@@ -108,6 +109,7 @@ std::string test()
       break;
       default: /* parent */
       {
+         std::cerr << "Parent gets key: " << key << "\n";
          proc_wait->AddProcess( child );
          TheBuffer buffer_a( BUFFSIZE,
                              key, 

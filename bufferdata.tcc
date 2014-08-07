@@ -223,6 +223,10 @@ template < class T > struct Data< T, RingBufferType::SharedMemory > : public Dat
          (this)->read_pt = 
             (Pointer*) SHM::Init( ptr_key.c_str(), (sizeof( Pointer ) * 2) + 
                                                     sizeof( Cookie ));
+         (this)->write_pt = &(this)->read_pt[ 1 ];
+         
+         assert( (this)->read_pt   != nullptr );
+         assert( (this)->write_pt  != nullptr );
       }
       catch( bad_shm_alloc &ex )
       {
@@ -230,6 +234,8 @@ template < class T > struct Data< T, RingBufferType::SharedMemory > : public Dat
          {
             (this)->read_pt  = (Pointer*) SHM::Open( ptr_key.c_str() );
             (this)->write_pt = &(this)->read_pt[ 1 ];
+            assert( (this)->read_pt   != nullptr );
+            assert( (this)->write_pt  != nullptr );
             /** 
              * this will happen at least once for the SHM sections, 
              * might as well do it here
