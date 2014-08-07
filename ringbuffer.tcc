@@ -36,7 +36,6 @@
 #include <fstream>
 
 #include "ringbufferbase.tcc"
-#include "shm.hpp"
 #include "ringbuffertypes.hpp"
 #include "SystemClock.tcc"
 
@@ -51,8 +50,7 @@ extern Clock *system_clock;
 
 template < class T, 
            RingBufferType type = RingBufferType::Heap, 
-           bool monitor = false,
-           size_t SIZE = 0 >  class RingBuffer : 
+           bool monitor = false >  class RingBuffer : 
                public RingBufferBase< T, type >
 {
 public:
@@ -270,100 +268,30 @@ public:
 /** 
  * SharedMemory 
  */
-template< class T, size_t SIZE > class RingBuffer< T, 
-                                                   RingBufferType::SharedMemory, 
-                                                   false, 
-                                                   SIZE > : 
-   public RingBufferBase< T, RingBufferType::SharedMemory >
+template< class T > class RingBuffer< T, 
+                                      RingBufferType::SharedMemory, 
+                                      false > :
+                            public RingBufferBase< T, RingBufferType::SharedMemory >
 {
 public:
-   RingBuffer( const std::string key,
+   RingBuffer( const size_t      nitems,
+               const std::string key,
                Direction         dir,
-               bool              multi_threaded_init = true,
                const size_t      alignment = 16 ) : 
                RingBufferBase< T, RingBufferType::SharedMemory >(),
                                               shm_key( key )
    {
-      if( alignment % sizeof( void * ) != 0 )
-      {
-         std::cerr << "Alignment must be a multiple of ( " << 
-            sizeof( void * ) << " ), reset and try again.";
-         exit( EXIT_FAILURE );
-      }
-      /** calc total size **/
-      total_size = 
-         sizeof(  Buffer::Data< T, RingBufferType::SharedMemory , SIZE > );
-      
-      /** store already set to nullptr **/
-      try
-      {
-         (this)->data = (Buffer::Data< T, RingBufferType::SharedMemory>*) 
-                         SHM::Init( 
-                         key.c_str(),
-                         total_size );
-      }
-      catch( bad_shm_alloc &ex )
-      {
-         try
-         {
-            (this)->data = (Buffer::Data< T, 
-                                          RingBufferType::SharedMemory>*) 
-                                          SHM::Open( key.c_str() );
-         }
-         catch( bad_shm_alloc &ex2 )
-         {
-            std::cerr << ex2.what() << "\n";
-            exit( EXIT_FAILURE );
-         }
-      }
-     
-      assert( (this)->data );
-
-      {
-         Pointer temp( SIZE );
-         /**
-          * Pointer has all static functions and some data members we need
-          * to initialize like they are in the constructor, so memcopying will
-          * work just fine
-          */
-         std::memcpy( &(this)->data->read_pt,    &temp, sizeof( Pointer ) );
-         std::memcpy( &(this)->data->write_pt,   &temp, sizeof( Pointer ) );
-      }
-      (this)->data->max_cap = SIZE;
-      
-      switch( dir )
-      {  
-         case( Direction::Producer ):
-            (this)->data->cookie.a = 0x1337;
-            break;
-         case( Direction::Consumer ):
-            (this)->data->cookie.b = 0x1337;
-            break;
-         default:
-            std::cerr << "Unknown direction (" << dir << "), exiting!!\n";
-            exit( EXIT_FAILURE );
-            break;
-      }
-      
-      while( multi_threaded_init && (this)->data->cookie.a != (this)->data->cookie.b )
-      {
-         std::this_thread::yield();
-      }
-      /* theoretically we're all set */
+      (this)->data = new Data< T, RingBufferType::SharedMemory >( nitems, key, dir, alignment );
+      assert( (this)->data != nullptr );
    }
 
    virtual ~RingBuffer()
    {
-      SHM::Close( shm_key.c_str(),
-                  (void*) (this)->data,
-                  total_size,
-                  true,
-                  true );
+      delete( (this)->data );      
    }
 
 protected:
    const  std::string shm_key;
-   size_t total_size;
 };
 
 #endif /* END _RINGBUFFER_TCC_ */

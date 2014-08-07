@@ -29,55 +29,55 @@ Pointer::Pointer(const size_t cap ) : a( 0 ),
 }
 
 size_t 
-Pointer::val( Pointer &ptr )
+Pointer::val( Pointer *ptr )
 {
    struct{
       size_t a;
       size_t b;
    }copy;
    do{
-      copy.a = ptr.a;
-      copy.b = ptr.b;
+      copy.a = ptr->a;
+      copy.b = ptr->b;
    }while( copy.a ^ copy.b );
    return( copy.b );
 }
 
 size_t 
-Pointer::inc( Pointer &ptr )
+Pointer::inc( Pointer *ptr )
 {
-   ptr.a = ( ptr.a + 1 ) % ptr.max_cap;
-   ptr.b = ( ptr.b + 1 ) % ptr.max_cap;
-   if( ptr.b == 0 )
+   ptr->a = ( ptr->a + 1 ) % ptr->max_cap;
+   ptr->b = ( ptr->b + 1 ) % ptr->max_cap;
+   if( ptr->b == 0 )
    {
-      ptr.wrap_a++;
-      ptr.wrap_b++;
+      ptr->wrap_a++;
+      ptr->wrap_b++;
    }
-   return( ptr.b );
+   return( ptr->b );
 }
 
 size_t 
-Pointer::incBy( const size_t in, Pointer &ptr )
+Pointer::incBy( const size_t in, Pointer *ptr )
 {
-   ptr.a = ( ptr.a + in ) % ptr.max_cap;
-   ptr.b = ( ptr.b + in ) % ptr.max_cap;
-   if( ptr.b < in )
+   ptr->a = ( ptr->a + in ) % ptr->max_cap;
+   ptr->b = ( ptr->b + in ) % ptr->max_cap;
+   if( ptr->b < in )
    {
-      ptr.wrap_a++;
-      ptr.wrap_b++;
+      ptr->wrap_a++;
+      ptr->wrap_b++;
    }
-   return( ptr.b );
+   return( ptr->b );
 }
 
 size_t 
-Pointer::wrapIndicator( Pointer &ptr )
+Pointer::wrapIndicator( Pointer *ptr )
 {
    struct{
       size_t a;
       size_t b;
    }copy;
    do{
-      copy.a = ptr.wrap_a;
-      copy.b = ptr.wrap_b;
+      copy.a = ptr->wrap_a;
+      copy.b = ptr->wrap_b;
    }while( copy.a ^ copy.b );
    return( copy.b );
 }

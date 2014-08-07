@@ -43,14 +43,14 @@ public:
     * many items can be read.
     * @return size_t, current 'true' value of the pointer
     */
-   static size_t val( Pointer &ptr );
+   static size_t val( Pointer *ptr );
 
    /**
     * inc - increments the pointer, takes care of wrapping
     * the pointers as well so you don't run off the page
     * @return  size_t, current value of pointer after increment
     */
-   static size_t inc( Pointer &ptr );
+   static size_t inc( Pointer *ptr );
    
    /**
     * incBy - increments the current pointer poisition
@@ -59,7 +59,7 @@ public:
     * @param  in - const size_t
     * @return  size_t, current increment after adding 'in'
     */
-   static size_t incBy( const size_t in, Pointer &ptr );
+   static size_t incBy( const size_t in, Pointer *ptr );
 
    
    /**
@@ -70,7 +70,7 @@ public:
     * queue size.  
     * @return  size_t
     */
-   static size_t wrapIndicator( Pointer &ptr );
+   static size_t wrapIndicator( Pointer *ptr );
    
 private:
    volatile std::uint64_t           a;

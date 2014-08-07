@@ -4,15 +4,16 @@
 #include <thread>
 #include <cstdint>
 #include <unistd.h>
-#include "ringbuffer.tcc"
-#include "SystemClock.tcc"
 #include <array>
 #include <sstream>
 #include <fstream>
-#include "randomstring.tcc"
-#include "signalvars.hpp"
 #include <cassert>
 #include <cinttypes>
+#include "procwait.hpp"
+#include "ringbuffer.tcc"
+#include "SystemClock.tcc"
+#include "randomstring.tcc"
+#include "signalvars.hpp"
 
 #define MAX_VAL 10000
 
@@ -60,11 +61,12 @@ producer( Data &data, TheBuffer &buffer )
       const auto stop_time( system_clock->getTime() + service_time );
       while( system_clock->getTime() < stop_time );
    }
+   std::cerr << "ProducerDone!\n";
    return;
 }
 
 void 
-consumer( Data &data , TheBuffer &buffer )
+consumer( TheBuffer &buffer )
 {
    std::int64_t   current_count( 0 );
    const double service_time( 5.0e-6 );
@@ -85,21 +87,39 @@ std::string test()
    char shmkey[ 256 ];
    SHM::GenKey( shmkey, 256 );
    std::string key( shmkey );
-   TheBuffer buffer_a( key, 
-                       Direction::Producer, 
-                       false);
-   TheBuffer buffer_b( key, 
-                       Direction::Consumer, 
-                       false);
+   ProcWait *proc_wait( new ProcWait( 1 ) ); 
+   const pid_t child( fork() );
+   switch( child )
+   {
+      case( 0 /* CHILD */ ):
+      {
+         TheBuffer buffer_b( key, 
+                             Direction::Consumer, 
+                             false);
+         /** call consumer function directly **/
+         consumer( buffer_b );
+      }
+      break;
+      case( -1 /* failed to fork */ ):
+      {
+         std::cerr << "Failed to fork, exiting!!\n";
+         exit( EXIT_FAILURE );
+      }
+      break;
+      default: /* parent */
+      {
+         proc_wait->AddProcess( child );
+         TheBuffer buffer_a( key, 
+                             Direction::Producer, 
+                             false);
+         /** call producer directly **/
+         producer( data, buffer_a );
+      }
+   }
+  
+   /** parent waits for child **/
+   proc_wait->WaitForChildren();
 
-/** TODO, write fork loop to really "test" the SHM **/
-   std::thread a( producer, 
-                  std::ref( data ), 
-                  std::ref( buffer_a ) );
-
-   std::thread b( consumer, 
-                  std::ref( data ), 
-                  std::ref( buffer_b ) );
 
    
 #elif defined USELOCAL
@@ -111,13 +131,17 @@ std::string test()
    std::thread b( consumer, 
                   std::ref( data ), 
                   std::ref( buffer ) );
-#endif
    a.join();
    b.join();
-   //auto &monitor_data( buffer.getQueueData() );
-   //std::stringstream ss;
-   //Monitor::QueueData::print( monitor_data, Monitor::QueueData::Bytes, ss, true);
+#endif
+#if USESharedMemory   
    return( "done" );
+#else
+   auto &monitor_data( buffer.getQueueData() );
+   std::stringstream ss;
+   Monitor::QueueData::print( monitor_data, Monitor::QueueData::Bytes, ss, true);
+   return( ss.str() );
+#endif
 }
 
 
