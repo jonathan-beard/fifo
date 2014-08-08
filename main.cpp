@@ -27,9 +27,9 @@ struct Data
 } data( MAX_VAL );
 
 
-#define USESharedMemory 1
-//#define USELOCAL 1
-#define BUFFSIZE 10
+//#define USESharedMemory 1
+#define USELOCAL 1
+#define BUFFSIZE 10000
 
 #ifdef USESharedMemory
 typedef RingBuffer< std::int64_t, 
@@ -49,19 +49,14 @@ void
 producer( Data &data, TheBuffer &buffer )
 {
    std::int64_t current_count( 0 );
-   const double service_time( 10.0e-6 );
    while( current_count++ < data.send_count )
    {
       auto &ref( buffer.allocate() );
       ref = current_count;
-      std::cerr << "Producer: " << ref << "\n";
       buffer.push( /* current_count, */ 
          (current_count == data.send_count ? 
           RBSignal::RBEOF : RBSignal::NONE ) );
-      const auto stop_time( system_clock->getTime() + service_time );
-      while( system_clock->getTime() < stop_time );
    }
-   std::cerr << "ProducerDone!\n";
    return;
 }
 
@@ -69,17 +64,12 @@ void
 consumer( TheBuffer &buffer )
 {
    std::int64_t   current_count( 0 );
-   const double service_time( 5.0e-6 );
    RBSignal signal( RBSignal::NONE );
    while( signal != RBSignal::RBEOF )
    {
       buffer.pop( current_count, &signal );
-      std::cerr << current_count << "\n";
-      const auto stop_time( system_clock->getTime() + service_time );
-      while( system_clock->getTime() < stop_time );
    }
    assert( current_count == MAX_VAL );
-   std::cerr << "ConsumerDone!\n";
    return;
 }
 
@@ -95,13 +85,13 @@ std::string test()
    {
       case( 0 /* CHILD */ ):
       {
-         std::cerr << "Child gets key: " << key << "\n";
          TheBuffer buffer_b( BUFFSIZE,
                              key, 
                              Direction::Consumer, 
                              false);
          /** call consumer function directly **/
          consumer( buffer_b );
+         exit( EXIT_SUCCESS );
       }
       break;
       case( -1 /* failed to fork */ ):
@@ -112,7 +102,6 @@ std::string test()
       break;
       default: /* parent */
       {
-         std::cerr << "Parent gets key: " << key << "\n";
          proc_wait->AddProcess( child );
          TheBuffer buffer_a( BUFFSIZE,
                              key, 
@@ -135,7 +124,6 @@ std::string test()
                   std::ref( buffer ) );
 
    std::thread b( consumer, 
-                  std::ref( data ), 
                   std::ref( buffer ) );
    a.join();
    b.join();
