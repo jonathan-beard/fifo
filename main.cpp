@@ -27,8 +27,8 @@ struct Data
 } data( MAX_VAL );
 
 
-//#define USESharedMemory 1
-#define USELOCAL 1
+#define USESharedMemory 1
+//#define USELOCAL 1
 #define BUFFSIZE 10000
 
 #ifdef USESharedMemory

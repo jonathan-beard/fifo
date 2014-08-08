@@ -292,13 +292,19 @@ template < class T > struct Data< T, RingBufferType::SharedMemory > :
       /** three segments of SHM to close **/
       SHM::Close( store_key.c_str(), 
                   (void*) (this)->store, 
-                  (this)->length_store );
+                  (this)->length_store,
+                  false,
+                  true );
       SHM::Close( signal_key.c_str(),
                   (void*) (this)->signal,
-                  (this)->length_signal );
+                  (this)->length_signal,
+                  false,
+                  true );
       SHM::Close( ptr_key.c_str(),   
                   (void*) (this)->read_pt, 
-                  (sizeof( Pointer ) * 2) + sizeof( Cookie ) );
+                  (sizeof( Pointer ) * 2) + sizeof( Cookie ),
+                  false,
+                  true );
    }
    struct Cookie
    {
