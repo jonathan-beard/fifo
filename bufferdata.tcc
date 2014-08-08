@@ -22,6 +22,7 @@
 #include <cstdint>
 #include <cstring>
 #include <cassert>
+#include <thread>
 #include "shm.hpp"
 #include "signalvars.hpp"
 #include "pointer.hpp"
@@ -79,11 +80,11 @@ struct Signal
  */
 template < class T > struct DataBase 
 {
-   DataBase( size_t max_cap ) : read_pt ( nullptr ),
-                                write_pt( nullptr ),
-                                max_cap ( max_cap ),
-                                store   ( nullptr ),
-                                signal  ( nullptr )
+   DataBase( const size_t max_cap ) : read_pt ( nullptr ),
+                                      write_pt( nullptr ),
+                                      max_cap ( max_cap ),
+                                      store   ( nullptr ),
+                                      signal  ( nullptr )
    {
 
       length_store   = ( sizeof( Element< T > ) * max_cap ); 
@@ -156,7 +157,8 @@ template < class T,
 
 };
 
-template < class T > struct Data< T, RingBufferType::SharedMemory > : public DataBase< T > 
+template < class T > struct Data< T, RingBufferType::SharedMemory > : 
+   public DataBase< T > 
 {
    /**
     * Data - Constructor for SHM based ringbuffer.  Allocates store, signal and 
@@ -180,32 +182,42 @@ template < class T > struct Data< T, RingBufferType::SharedMemory > : public Dat
       /** now work through opening SHM **/
       switch( dir )
       {
-         case( Producer ):
+         case( Direction::Producer ):
          {
-            auto alloc_with_error = [&]( void **ptr, const size_t length, const char *key )
+            auto alloc_with_error = 
+            [&]( void **ptr, const size_t length, const char *key )
             {
                try
                {
                   *ptr = SHM::Init( key, length );
                }catch( bad_shm_alloc &ex )
                {
-                  std::cerr << "Bad SHM allocate for key (" << key << ") with length (" << length << ")\n";
+                  std::cerr << 
+                  "Bad SHM allocate for key (" << 
+                     key << ") with length (" << length << ")\n";
                   std::cerr << "Message: " << ex.what() << ", exiting.\n";
                   exit( EXIT_FAILURE );
                }
             };
-            alloc_with_error( (void**)&(this)->store, (this)->length_store, store_key.c_str() );
-            alloc_with_error( (void**)&(this)->signal, (this)->length_signal, signal_key.c_str() );
-            alloc_with_error( (void**)&(this)->read_pt, (sizeof( Pointer ) * 2 ) + sizeof( Cookie ), ptr_key.c_str() );
+            alloc_with_error( (void**)&(this)->store, 
+                              (this)->length_store, 
+                              store_key.c_str() );
+            alloc_with_error( (void**)&(this)->signal, 
+                              (this)->length_signal, 
+                              signal_key.c_str() );
+            alloc_with_error( (void**)&(this)->read_pt, 
+                              (sizeof( Pointer ) * 2 ) + sizeof( Cookie ), 
+                              ptr_key.c_str() );
+
             (this)->write_pt = &(this)->read_pt[ 1 ];
             (this)->cookie   = (Cookie*) &(this)->read_pt[ 2 ];
             while( ((this)->cookie->val) != 0x1337 )
             {
-               /** spin **/;
+               std::this_thread::yield();
             }
          }
          break;
-         case( Consumer ):
+         case( Direction::Consumer ):
          {
             auto retry_func = [&]( void **ptr, const char *str )
             {
@@ -222,6 +234,7 @@ template < class T > struct Data< T, RingBufferType::SharedMemory > : public Dat
                      //do nothing
                      timeout--;
                      error_copy = ex.what();
+                     std::this_thread::yield();
                      continue;
                   }
                   goto SUCCESS;
@@ -269,19 +282,13 @@ template < class T > struct Data< T, RingBufferType::SharedMemory > : public Dat
       /** three segments of SHM to close **/
       SHM::Close( store_key.c_str(), 
                   (void*) (this)->store, 
-                  (this)->length_store, 
-                  true, 
-                  true ); 
+                  (this)->length_store ); 
       SHM::Close( signal_key.c_str(),
                   (void*) (this)->signal,
-                  (this)->length_signal, 
-                  true, 
-                  true );
+                  (this)->length_signal ); 
       SHM::Close( ptr_key.c_str(),   
                   (void*) (this)->read_pt, 
-                  (sizeof( Pointer ) * 2), 
-                  true, 
-                  true );
+                  (sizeof( Pointer ) * 2) + sizeof( Cookie ) ); 
    }
    struct Cookie
    {

@@ -29,7 +29,7 @@ struct Data
 
 #define USESharedMemory 1
 //#define USELOCAL 1
-#define BUFFSIZE 100
+#define BUFFSIZE 10000
 
 #ifdef USESharedMemory
 typedef RingBuffer< std::int64_t, 
