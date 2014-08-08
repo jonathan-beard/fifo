@@ -296,4 +296,31 @@ protected:
    const  std::string shm_key;
 };
 
+
+/**
+ * TCP w/ multiplexing
+ */
+template <class T> class RingBuffer< T,
+                                     RingBufferType::TCP,
+                                     false /* no monitoring yet */ > :
+                                       public RingBufferBase< T, RingBufferType::Heap >
+{
+public:
+   RingBuffer( const size_t      nitems,
+               const std::string dns_name,
+               Direction         dir,
+               const size_t      alignment = 16 ) : 
+                  RingBufferBase< T, 
+                                  RingBufferType::Heap >()
+   {
+      //TODO, fill in stuff here
+   }
+
+   virtual ~RingBuffer()
+   {
+
+   }
+
+protected:
+};
 #endif /* END _RINGBUFFER_TCC_ */
