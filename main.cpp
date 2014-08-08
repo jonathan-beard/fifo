@@ -15,7 +15,7 @@
 #include "randomstring.tcc"
 #include "signalvars.hpp"
 
-#define MAX_VAL 1000000
+#define MAX_VAL 1000
 
 
 
@@ -29,7 +29,7 @@ struct Data
 
 #define USESharedMemory 1
 //#define USELOCAL 1
-#define BUFFSIZE 10000
+#define BUFFSIZE 10
 
 #ifdef USESharedMemory
 typedef RingBuffer< std::int64_t, 
@@ -54,6 +54,7 @@ producer( Data &data, TheBuffer &buffer )
    {
       auto &ref( buffer.allocate() );
       ref = current_count;
+      std::cerr << "Producer: " << ref << "\n";
       buffer.push( /* current_count, */ 
          (current_count == data.send_count ? 
           RBSignal::RBEOF : RBSignal::NONE ) );
@@ -73,10 +74,12 @@ consumer( TheBuffer &buffer )
    while( signal != RBSignal::RBEOF )
    {
       buffer.pop( current_count, &signal );
+      std::cerr << current_count << "\n";
       const auto stop_time( system_clock->getTime() + service_time );
       while( system_clock->getTime() < stop_time );
    }
    assert( current_count == MAX_VAL );
+   std::cerr << "ConsumerDone!\n";
    return;
 }
 

@@ -198,6 +198,7 @@ template < class T > struct Data< T, RingBufferType::SharedMemory > :
                   std::cerr << "Message: " << ex.what() << ", exiting.\n";
                   exit( EXIT_FAILURE );
                }
+               assert( *ptr != nullptr );
             };
             alloc_with_error( (void**)&(this)->store, 
                               (this)->length_store, 
@@ -210,8 +211,14 @@ template < class T > struct Data< T, RingBufferType::SharedMemory > :
                               ptr_key.c_str() );
 
             (this)->write_pt = &(this)->read_pt[ 1 ];
+            
+            Pointer temp( max_cap );
+            std::memcpy( (this)->read_pt,  &temp, sizeof( Pointer ) );
+            std::memcpy( (this)->write_pt, &temp, sizeof( Pointer ) );
+            
             (this)->cookie   = (Cookie*) &(this)->read_pt[ 2 ];
-            while( ((this)->cookie->val) != 0x1337 )
+            (this)->cookie->producer = 0x1337;
+            while( (this)->cookie->consumer != 0x1337 )
             {
                std::this_thread::yield();
             }
@@ -240,7 +247,8 @@ template < class T > struct Data< T, RingBufferType::SharedMemory > :
                   goto SUCCESS;
                }
                /** timeout reached **/
-               std::cerr << "Failed to open shared memory for \"" << str << "\", exiting!!\n";
+               std::cerr << "Failed to open shared memory for \"" << 
+                  str << "\", exiting!!\n";
                std::cerr << "Error message: " << error_copy << "\n";
                exit( EXIT_FAILURE );
                SUCCESS:;
@@ -257,14 +265,16 @@ template < class T > struct Data< T, RingBufferType::SharedMemory > :
             (this)->write_pt  = &(this)->read_pt[ 1 ];
             assert( (this)->write_pt  != nullptr );
             (this)->cookie    = (Cookie*)&(this)->read_pt[ 2 ]; 
-            /** 
-             * this will happen at least once for the SHM sections, 
-             * might as well do it here
-             */
+            
             Pointer temp( max_cap );
-            std::memcpy( &(this)->read_pt,  &temp, sizeof( Pointer ) );
-            std::memcpy( &(this)->write_pt, &temp, sizeof( Pointer ) );
-            (this)->cookie->val = 0x1337;
+            std::memcpy( (this)->read_pt,  &temp, sizeof( Pointer ) );
+            std::memcpy( (this)->write_pt, &temp, sizeof( Pointer ) );
+            
+            (this)->cookie->consumer = 0x1337;
+            while( (this)->cookie->producer != 0x1337 )
+            {
+               std::this_thread::yield();
+            }
          }
          break;
          default:
@@ -282,20 +292,21 @@ template < class T > struct Data< T, RingBufferType::SharedMemory > :
       /** three segments of SHM to close **/
       SHM::Close( store_key.c_str(), 
                   (void*) (this)->store, 
-                  (this)->length_store ); 
+                  (this)->length_store );
       SHM::Close( signal_key.c_str(),
                   (void*) (this)->signal,
-                  (this)->length_signal ); 
+                  (this)->length_signal );
       SHM::Close( ptr_key.c_str(),   
                   (void*) (this)->read_pt, 
-                  (sizeof( Pointer ) * 2) + sizeof( Cookie ) ); 
+                  (sizeof( Pointer ) * 2) + sizeof( Cookie ) );
    }
    struct Cookie
    {
-      int64_t val;
+      int32_t producer;
+      int32_t consumer;;
    };
 
-   Cookie         *cookie;
+   volatile Cookie         *cookie;
 
    /** process local key copies **/
    const std::string store_key; 
