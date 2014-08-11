@@ -3,7 +3,7 @@ CXX   ?= g++
 
 
 CFLAGS   =  -O0 -g -Wall -std=c99
-CXXFLAGS =  -O0 -g -Wall -std=c++11  -DRDTSCP=1
+CXXFLAGS =  -O0 -g -Wall -std=c++11  -DRDTSCP=1 -DLIMITRATE=1
 
 COBJS = getrandom
 CXXOBJS = main pointer shm Clock procwait 
