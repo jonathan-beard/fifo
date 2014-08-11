@@ -42,7 +42,7 @@ typedef RingBuffer< std::int64_t          /* buffer type */,
 #endif
 
 
-Clock *system_clock = new SystemClock< System >( 1 );
+Clock *system_clock = new SystemClock< Cycle >( 1 );
 
 
 void
@@ -56,6 +56,7 @@ producer( Data &data, TheBuffer &buffer )
       buffer.push( /* current_count, */ 
          (current_count == data.send_count ? 
           RBSignal::RBEOF : RBSignal::NONE ) );
+      
    }
    return;
 }
