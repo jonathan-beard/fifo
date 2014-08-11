@@ -15,7 +15,7 @@
 #include "randomstring.tcc"
 #include "signalvars.hpp"
 
-#define MAX_VAL 100000
+#define MAX_VAL 1000000
 
 
 
@@ -69,7 +69,7 @@ void
 consumer( TheBuffer &buffer )
 {
    std::int64_t   current_count( 0 );
-   const float serviceTime( 5e-6 );
+   const float serviceTime( 1e-6 );
    RBSignal signal( RBSignal::NONE );
    while( signal != RBSignal::RBEOF )
    {
