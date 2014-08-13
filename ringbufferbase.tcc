@@ -215,7 +215,7 @@ public:
       const size_t write_index( Pointer::val( data->write_pt ) );
       data->signal[ write_index ].sig = signal;
       Pointer::inc( data->write_pt );
-      write_stats.all++;
+      write_stats.count++;
       if( signal == RBSignal::RBEOF )
       {
          (this)->write_finished = true;
@@ -252,7 +252,7 @@ public:
 	   data->store[ write_index ].item     = item;
 	   data->signal[ write_index ].sig   = signal;
 	   Pointer::inc( data->write_pt );
-	   write_stats.all++;
+	   write_stats.count++;
       if( signal == RBSignal::RBEOF )
       {
          (this)->write_finished = true;
@@ -299,7 +299,7 @@ public:
             data->signal[ write_index ].sig = RBSignal::NONE;
          }
          Pointer::inc( data->write_pt );
-         write_stats.all++;
+         write_stats.count++;
          begin++;
       }
       if( signal == RBSignal::RBEOF )
@@ -342,7 +342,7 @@ public:
       }
       item = data->store[ read_index ].item;
       Pointer::inc( data->read_pt );
-      read_stats.all++;
+      read_stats.count++;
    }
 
    /**
@@ -568,7 +568,7 @@ public:
    {
       if( ! (this)->allocate_called ) return;
       data->signal[ 0 ].sig = signal;
-      write_stats.all++;
+      write_stats.count++;
       (this)->allocate_called = false;
    }
 

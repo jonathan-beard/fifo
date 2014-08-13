@@ -21,11 +21,10 @@
 #define _BLOCKED_HPP_  1
 
 
-struct Blocked
+union Blocked
 {
    
-   Blocked() : count( 0 ),
-               blocked( 0 )
+   Blocked() : all( 0 )
    {}
 
    Blocked( volatile Blocked &other )
@@ -34,17 +33,21 @@ struct Blocked
       blocked  = other.blocked;
    }
 
-   Blocked& operator += ( Blocked &lhs, const Blocked &rhs )
+   Blocked& operator += ( const Blocked &rhs )
    {
       if( ! rhs.blocked )
       {
-         lhs.count += rhs.count;
+         (this)->count += rhs.count;
       }
-      return( lhs );
+      return( *this );
    }
-
-   std::uint64_t     count;
-   std::uint64_t     blocked;
+   
+   struct
+   {
+      std::uint32_t blocked;
+      std::uint32_t count;
+   };
+   std::uint64_t all;
 } __attribute__ ((aligned( 8 )));
 
 #endif /* END _BLOCKED_HPP_ */

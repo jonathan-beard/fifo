@@ -64,7 +64,7 @@ namespace Monitor
          {
             return( 0.0 );
          }
-         return( ( ((double)qd.items_arrived ) / 
+         return( ( (((double)qd.items_arrived ) * qd.item_unit) / 
                      (qd.sample_frequency * (double)qd.arrived_samples ) ) * 
                         (double)unit_conversion[ unit ] );
       }
@@ -76,7 +76,7 @@ namespace Monitor
          {
             return( 0.0 );
          }
-         return( ( ((double)qd.items_departed ) / 
+         return( ( (((double)qd.items_departed ) * qd.item_unit ) / 
                      (
                      qd.sample_frequency * (double)qd.departed_samples ) ) * 
                         (double)unit_conversion[ unit ] );

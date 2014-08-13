@@ -77,7 +77,7 @@ template< class T,
 public:
    RingBufferBaseMonitor( const size_t n ) : 
             RingBufferBase< T, type >(),
-            monitor_data( 5e-6 , sizeof( T ) ),
+            monitor_data( 5e-4 , sizeof( T ) ),
             monitor( nullptr ),
             term( false )
    {
@@ -131,14 +131,31 @@ protected:
       {
          case( RingBufferType::Heap ):
          {
+            std::ofstream ofs( "/tmp/time_log.csv" );
+            if( ! ofs.is_open() )
+            {
+               std::cerr << "Failed to open output log\n";
+               exit( EXIT_FAILURE );
+            }
+            auto prev_time( system_clock->getTime() ); 
             while( ! term )
             {
-               const Blocked read_copy( buffer.read_stats );
-               const Blocked write_copy( buffer.write_stats );
-               buffer.read_stats.all = 0;
-               buffer.write_stats.all = 0;
                const auto stop_time( 
                   data.sample_frequency + system_clock->getTime() );
+               while( system_clock->getTime() < stop_time  && ! term )
+               {
+#if __x86_64            
+                  __asm__ volatile("\
+                     pause"
+                     :
+                     :
+                     : );
+#endif               
+               }
+               const Blocked read_copy ( buffer.read_stats );
+               const Blocked write_copy( buffer.write_stats );
+               buffer.read_stats.all   = 0;
+               buffer.write_stats.all  = 0;
                if( ! arrival_started )
                {
                   if( write_copy.count != 0 )
@@ -169,22 +186,15 @@ protected:
                {
                   data.items_departed += read_copy.count;
                   data.departed_samples++;
-               }
 
+                  ofs << system_clock->getTime() - prev_time << "\n";
+               }
+               prev_time = system_clock->getTime();
                
                data.total_occupancy += buffer.size();
                data.samples         += 1;
-               while( system_clock->getTime() < stop_time  && ! term )
-               {
-#if __x86_64            
-                  __asm__ volatile("\
-                     pause"
-                     :
-                     :
-                     : );
-#endif               
-               }
             }
+            ofs.close();
          }
          break;
          case( RingBufferType::Infinite ):
