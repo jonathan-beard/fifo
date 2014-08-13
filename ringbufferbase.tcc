@@ -39,7 +39,7 @@
  * writes or blocking for space, otherwise blocking will
  * actively spin while waiting.
  */
-#define NICE 1
+//#define NICE 1
 
 extern Clock *system_clock;
 

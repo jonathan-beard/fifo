@@ -42,7 +42,7 @@ typedef RingBuffer< std::int64_t          /* buffer type */,
 #endif
 
 
-Clock *system_clock = new SystemClock< System >( 1 );
+Clock *system_clock = new SystemClock< Cycle >( 1 );
 
 
 void
@@ -69,7 +69,7 @@ void
 consumer( TheBuffer &buffer )
 {
    std::int64_t   current_count( 0 );
-   const float serviceTime( 1e-6 );
+   const float serviceTime( 5e-6 );
    RBSignal signal( RBSignal::NONE );
    while( signal != RBSignal::RBEOF )
    {
