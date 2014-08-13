@@ -20,23 +20,31 @@
 #ifndef _BLOCKED_HPP_
 #define _BLOCKED_HPP_  1
 
-typedef std::uint32_t blocked_part_t;
-typedef std::uint64_t blocked_whole_t;
 
-union Blocked{
+struct Blocked
+{
    
-   Blocked() : all( 0 )
+   Blocked() : count( 0 ),
+               blocked( 0 )
    {}
 
    Blocked( volatile Blocked &other )
    {
-      all = other.all;
+      count    = other.count;
+      blocked  = other.blocked;
    }
 
-   struct{
-      blocked_part_t  count;
-      blocked_part_t  blocked;
-   };
-   blocked_whole_t    all;
+   Blocked& operator += ( Blocked &lhs, const Blocked &rhs )
+   {
+      if( ! rhs.blocked )
+      {
+         lhs.count += rhs.count;
+      }
+      return( lhs );
+   }
+
+   std::uint64_t     count;
+   std::uint64_t     blocked;
 } __attribute__ ((aligned( 8 )));
+
 #endif /* END _BLOCKED_HPP_ */
