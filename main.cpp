@@ -15,7 +15,7 @@
 #include "randomstring.tcc"
 #include "signalvars.hpp"
 
-#define MAX_VAL 1000000
+#define MAX_VAL 10000000
 
 
 

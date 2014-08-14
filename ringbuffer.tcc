@@ -34,6 +34,7 @@
 #include <vector>
 #include <iostream>
 #include <fstream>
+#include <utility>
 
 #include "ringbufferbase.tcc"
 #include "ringbuffertypes.hpp"
@@ -131,12 +132,7 @@ protected:
       {
          case( RingBufferType::Heap ):
          {
-            std::ofstream ofs( "/tmp/time_log.csv" );
-            if( ! ofs.is_open() )
-            {
-               std::cerr << "Failed to open output log\n";
-               exit( EXIT_FAILURE );
-            }
+            std::vector< std::pair< float, std::uint32_t > > loglist; 
             auto prev_time( system_clock->getTime() ); 
             while( ! term )
             {
@@ -186,13 +182,22 @@ protected:
                {
                   data.items_departed += read_copy.count;
                   data.departed_samples++;
-
-                  ofs << system_clock->getTime() - prev_time << "\n";
+                  loglist.push_back( std::make_pair( ( system_clock->getTime() - prev_time ), read_copy.count ) );
                }
                prev_time = system_clock->getTime();
                
                data.total_occupancy += buffer.size();
                data.samples         += 1;
+            }
+            std::ofstream ofs( "/tmp/log.csv" );
+            if( ! ofs.is_open() )
+            {
+               std::cerr << "Failed to open output log\n";
+               exit( EXIT_FAILURE );
+            }
+            for( auto pair : loglist )
+            {
+               ofs << pair.first << "," << pair.second << "\n";
             }
             ofs.close();
          }
