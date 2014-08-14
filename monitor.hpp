@@ -32,7 +32,7 @@ namespace Monitor
        * @param sample_frequency - in seconds
        * @param nbytes - number of bytes in each queue item
        */
-      QueueData( double sample_frequency, size_t nbytes ) :
+      QueueData( size_t nbytes ) :
          items_arrived( 0 ),
          arrived_samples( 0 ),
          items_departed( 0 ),
@@ -40,7 +40,7 @@ namespace Monitor
          total_occupancy( 0 ),
          item_unit( nbytes ),
          samples( 0 ),
-         sample_frequency( sample_frequency )
+         sample_frequency( 0 )
       {
       }
 
@@ -138,7 +138,7 @@ namespace Monitor
       std::uint64_t          items_departed;
       std::uint64_t          departed_samples;
       std::uint64_t          total_occupancy;
-      const size_t           item_unit;
+      size_t                 item_unit;
       std::uint64_t          samples;
       double                 sample_frequency;
       double                 sample_time;

@@ -78,7 +78,7 @@ template< class T,
 public:
    RingBufferBaseMonitor( const size_t n ) : 
             RingBufferBase< T, type >(),
-            monitor_data( 5e-6 , sizeof( T ) ),
+            monitor_data( sizeof( T ) ),
             monitor( nullptr ),
             term( false )
    {
