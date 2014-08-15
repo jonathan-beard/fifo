@@ -53,6 +53,18 @@ namespace Monitor
       std::int64_t      frame_count;
    };
 
+   union blocked
+   {
+      blocked() : 
+   
+      struct {
+         std::int8_t
+         arrival   : 4,
+         departure : 4;
+      };
+      std::int8_t all;
+   }
+
    struct frame_resolution
    {
       frame_resolution() : curr_frame_index( 0 ),
@@ -64,6 +76,7 @@ namespace Monitor
       }
 
       static void setBlockedStatus( frame_resolution &frame,
+                                    Direction         dir,,
                                     const bool blocked = false )
       {
           frame.curr_frame_index[ frame.curr_frame_index ]

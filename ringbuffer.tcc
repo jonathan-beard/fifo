@@ -169,16 +169,23 @@ protected:
                if( write_copy.blocked == 0 && 
                      arrival_started  && ! buffer.write_finished ) 
                {
+                  frame_resolution::setBlockedStatus( data.resolution,
+                                                      false );
                   if( converged )
                   {
-                     data.arrival.items += write_copy.count;
-                     data.arrival.frame_count++;
+                     data.arrival.items         += write_copy.count;
+                     data.arrival.frame_count   += 1;
                   }
                   else
                   {
-                     data.arrival.items += 0;
-                     data.arrival.frame_count += 0;
+                     data.arrival.items         += 0;
+                     data.arrival.frame_count   += 0;
                   }
+               }
+               else
+               {
+                  frame_resolution::setBlockedStatus( data.resolution,
+                                                      true );
                }
                
                /**
@@ -188,8 +195,23 @@ protected:
                 */
                if( read_copy.blocked == 0 )
                {
-                  data.departure.items += read_copy.count;
-                  data.departure.frame_count++;
+                  frame_resolution::setBlockedStatus( data.resolution,
+                                                      false );
+                  if( converted )
+                  {
+                     data.departure.items       += read_copy.count;
+                     data.departure.frame_count += 1;
+                  }
+                  else
+                  {
+                     data.departure.items      += 0;
+                     data.departure.frame_cunt += 0;
+                  }
+               }
+               else
+               {
+                  frame_resolution::setBlockedStatus( data.resolution,
+                                                      true );
                }
                data.mean_occupancy.items        += buffer.size();
                data.mean_occupancy.frame_count  += 1;
