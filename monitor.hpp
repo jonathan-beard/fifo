@@ -142,6 +142,7 @@ namespace Monitor
       std::uint64_t          samples;
       double                 sample_frequency;
       double                 sample_time;
+      double                 previous_time;
    };
 }
 

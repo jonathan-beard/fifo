@@ -132,7 +132,7 @@ protected:
       {
          case( RingBufferType::Heap ):
          {
-            std::vector< std::pair< float, std::uint32_t > > loglist; 
+            std::vector< std::pair< float, float > > loglist; 
             auto prev_time( system_clock->getTime() ); 
             while( ! term )
             {
@@ -182,13 +182,16 @@ protected:
                {
                   data.items_departed += read_copy.count;
                   data.departed_samples++;
-                  loglist.push_back( std::make_pair( ( system_clock->getTime() - prev_time ), read_copy.count ) );
                }
                prev_time = system_clock->getTime();
                
                data.total_occupancy += buffer.size();
                data.samples         += 1;
+               log.push_back( std::make_pair( data.sample_frequency,
+                                              
             }
+
+            /** log **/
             std::ofstream ofs( "/tmp/log.csv" );
             if( ! ofs.is_open() )
             {
