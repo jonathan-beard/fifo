@@ -19,9 +19,68 @@
  */
 #ifndef _MONITOR_HPP_
 #define _MONITOR_HPP_  1
+#include <cstdint>
+#include <cstring>
 
 namespace Monitor
 {
+   /**
+    * arrival_stats - contains to total item count and
+    * frame count.
+    */
+   struct arrival_stats
+   {
+      arrival_stats() : items( 0 ),
+                        frame_count( 0 )
+      {}
+
+      std::int64_t      items;
+      std::int64_t      frame_count;
+   };
+
+   struct frame_resolution
+   {
+      frame_resolution() : curr_frame_index( 0 ),
+                           curr_frame_width( 0 )
+      {
+         std::memset( frame_blocked, 
+                      0x0, 
+                      sizeof( bool ) * NUMFRAMES );
+      }
+
+      static void setBlockedStatus( struct frame_resolution &frame,
+                                    const bool blocked = false )
+      {
+          frame.curr_frame_index[ frame.curr_frame_index ]
+            = blocked;
+          frame.curr_frame_index = ( frame.curr_frame_index + 1 ) % 
+                                       NUMFRAMES;
+      }
+     
+      /**
+       * wasBlocked - returns true if at any time in the 
+       * previous NUMFRAMES the queue was blocked.
+       * @param   frame - frame resolution reference.
+       * @return  bool - true if the queue was blocked in NUMFRAMES
+       */
+      static bool wasBlocked( struct frame_resolution &frame )
+      {
+         for( auto i( 0 ); i < NUMFRAMES; i++ )
+         {
+            if( frame.frame_blocked[ i ] )
+            {
+               return( true );
+            }
+         }
+         return( false );
+      }
+
+      /** might be faster with a bit vector **/
+      bool     frame_blocked[ 5 ];
+      int      curr_frame_index;
+      double   curr_frame_width;
+   };
+
    struct QueueData 
    {
       enum Units : std::size_t { Bytes = 0, KB, MB, GB, TB, N };
@@ -142,7 +201,6 @@ namespace Monitor
       std::uint64_t          samples;
       double                 sample_frequency;
       double                 sample_time;
-      double                 previous_time;
    };
 }
 
