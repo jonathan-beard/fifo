@@ -22,6 +22,7 @@
 #include <cstdint>
 #include <cstring>
 #include "Clock.hpp"
+#include "ringbuffertypes.hpp"
 
 #define NUMFRAMES    5
 #define CONVERGENCE .01
@@ -53,17 +54,6 @@ namespace Monitor
       std::int64_t      frame_count;
    };
 
-   union blocked
-   {
-      blocked() : 
-   
-      struct {
-         std::int8_t
-         arrival   : 4,
-         departure : 4;
-      };
-      std::int8_t all;
-   }
 
    struct frame_resolution
    {
@@ -76,10 +66,10 @@ namespace Monitor
       }
 
       static void setBlockedStatus( frame_resolution &frame,
-                                    Direction         dir,,
+                                    Direction         dir,
                                     const bool blocked = false )
       {
-          frame.curr_frame_index[ frame.curr_frame_index ]
+          frame.frame_blocked[ frame.curr_frame_index ][ (int) dir ]
             = blocked;
           frame.curr_frame_index = ( frame.curr_frame_index + 1 ) % 
                                        NUMFRAMES;
@@ -95,7 +85,7 @@ namespace Monitor
       {
          for( auto i( 0 ); i < NUMFRAMES; i++ )
          {
-            if( frame.frame_blocked[ i ] )
+            if( frame.frame_blocked[ i ][ 0 ] && frame.frame_blocked[ i ][ 1 ] )
             {
                return( true );
             }
@@ -119,10 +109,12 @@ namespace Monitor
             frame.curr_frame_width );
          if( p_diff < 0 && p_diff < ( -CONVERGENCE ) )
          {
+            frame.curr_frame_width = frame.curr_frame_width**2; 
              return( false );
          }
          else if( p_diff > CONVERGENCE )
          {
+            frame.curr_frame_width = frame.curr_frame_width**2; 
             return( false );
          }
          //else
@@ -131,7 +123,7 @@ namespace Monitor
                                     
 
       /** might be faster with a bit vector **/
-      bool     frame_blocked[ NUMFRAMES ];
+      bool     frame_blocked[ NUMFRAMES ][ 2 ];
       int      curr_frame_index;
       double   curr_frame_width;
    };
