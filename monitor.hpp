@@ -48,7 +48,7 @@ namespace Monitor
                       sizeof( bool ) * NUMFRAMES );
       }
 
-      static void setBlockedStatus( struct frame_resolution &frame,
+      static void setBlockedStatus( frame_resolution &frame,
                                     const bool blocked = false )
       {
           frame.curr_frame_index[ frame.curr_frame_index ]
@@ -63,7 +63,7 @@ namespace Monitor
        * @param   frame - frame resolution reference.
        * @return  bool - true if the queue was blocked in NUMFRAMES
        */
-      static bool wasBlocked( struct frame_resolution &frame )
+      static bool wasBlocked( frame_resolution &frame )
       {
          for( auto i( 0 ); i < NUMFRAMES; i++ )
          {
@@ -74,6 +74,8 @@ namespace Monitor
          }
          return( false );
       }
+      
+      static void updateResolution( frame_resolution &frame 
 
       /** might be faster with a bit vector **/
       bool     frame_blocked[ 5 ];
