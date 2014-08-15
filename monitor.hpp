@@ -21,6 +21,10 @@
 #define _MONITOR_HPP_  1
 #include <cstdint>
 #include <cstring>
+#include "Clock.hpp"
+
+#define NUMFRAMES    5
+#define CONVERGENCE .01
 
 namespace Monitor
 {
@@ -28,11 +32,22 @@ namespace Monitor
     * arrival_stats - contains to total item count and
     * frame count.
     */
-   struct arrival_stats
+   struct rate_stat
    {
-      arrival_stats() : items( 0 ),
-                        frame_count( 0 )
+      rate_stat() : items( 0 ),
+                    frame_count( 0 )
       {}
+
+      std::int64_t      items;
+      std::int64_t      frame_count;
+   };
+
+   struct queue_stat
+   {
+      queue_stat() : items( 0 ),
+                     frame_count( 0 )
+      {
+      }
 
       std::int64_t      items;
       std::int64_t      frame_count;
@@ -75,10 +90,35 @@ namespace Monitor
          return( false );
       }
       
-      static void updateResolution( frame_resolution &frame 
+      /**
+       * updateResolution - function gets called at each iteration 
+       * of the monitor loop until convergence is reached at which 
+       * point this function returns true.
+       * @param   frame - frame_resolution struct
+       * @param   realized_frame_time - actual time to go through loop
+       * @return  bool
+       */
+      static bool updateResolution( frame_resolution &frame,
+                                    sclock_t          realized_frame_time )
+      {
+         const auto p_diff( 
+         ( realized_frame_time - frame.curr_frame_width ) /
+            frame.curr_frame_width );
+         if( p_diff < 0 && p_diff < ( -CONVERGENCE ) )
+         {
+             return( false );
+         }
+         else if( p_diff > CONVERGENCE )
+         {
+            return( false );
+         }
+         //else
+         return( true );
+      }
+                                    
 
       /** might be faster with a bit vector **/
-      bool     frame_blocked[ 5 ];
+      bool     frame_blocked[ NUMFRAMES ];
       int      curr_frame_index;
       double   curr_frame_width;
    };
@@ -93,63 +133,45 @@ namespace Monitor
        * @param sample_frequency - in seconds
        * @param nbytes - number of bytes in each queue item
        */
-      QueueData( size_t nbytes ) :
-         items_arrived( 0 ),
-         arrived_samples( 0 ),
-         items_departed( 0 ),
-         departed_samples( 0 ),
-         total_occupancy( 0 ),
-         item_unit( nbytes ),
-         samples( 0 ),
-         sample_frequency( 0 )
+      QueueData( size_t nbytes ) : item_unit( nbytes )
       {
       }
 
-      QueueData( const QueueData &other ) : 
-                           item_unit( other.item_unit ),
-                           sample_frequency( other.sample_frequency )
-      {
-         items_arrived     = other.items_arrived;
-         arrived_samples   = other.arrived_samples;
-         items_departed    = other.items_departed;
-         departed_samples  = other.departed_samples;
-         total_occupancy   = other.total_occupancy;
-         samples           = other.samples;
-      }
 
       static double get_arrival_rate( volatile QueueData &qd , 
                                       Units unit )
       {
          
-         if( qd.arrived_samples == 0 )
+         if( qd.arrival.items == 0 )
          {
             return( 0.0 );
          }
-         return( ( (((double)qd.items_arrived ) * qd.item_unit) / 
-                     (qd.sample_frequency * (double)qd.arrived_samples ) ) * 
-                        (double)unit_conversion[ unit ] );
+         return( ( (((double)qd.arrival.items ) * qd.item_unit) / 
+                     (qd.frequency.curr_frame_width * 
+                        (double)qd.arrival.frame_count ) ) * 
+                           (double)unit_conversion[ unit ] );
       }
 
       static double get_departure_rate( volatile QueueData &qd, 
                                         Units unit )
       {
-         if( qd.departed_samples == 0 )
+         if( qd.departure.items == 0 )
          {
             return( 0.0 );
          }
-         return( ( (((double)qd.items_departed ) * qd.item_unit ) / 
-                     (
-                     qd.sample_frequency * (double)qd.departed_samples ) ) * 
-                        (double)unit_conversion[ unit ] );
+         return( ( (((double)qd.departure.items ) * qd.item_unit ) / 
+                     (qd.frequency.curr_frame_width * 
+                        (double)qd.departure.frame_count ) ) * 
+                           (double)unit_conversion[ unit ] );
       }
 
       static double get_mean_queue_occupancy( volatile QueueData &qd ) 
       {
-         if( qd.samples == 0 )
+         if( qd.mean_occupancy.items == 0 )
          {
             return( 0 );
          }
-         return( qd.total_occupancy / qd.samples );
+         return( qd.mean_occupancy.items / qd.mean_occupancy.frame_count );
       }
 
       static double get_utilization( volatile QueueData &qd )
@@ -194,15 +216,12 @@ namespace Monitor
          return( stream );
       }
 
-      std::uint64_t          items_arrived;
-      std::uint64_t          arrived_samples;
-      std::uint64_t          items_departed;
-      std::uint64_t          departed_samples;
-      std::uint64_t          total_occupancy;
-      size_t                 item_unit;
-      std::uint64_t          samples;
-      double                 sample_frequency;
-      double                 sample_time;
+      rate_stat              arrival;
+      rate_stat              departure;
+      queue_stat             mean_occupancy;
+      frame_resolution       resolution;
+
+      const size_t           item_unit;
    };
 }
 

@@ -132,12 +132,12 @@ protected:
       {
          case( RingBufferType::Heap ):
          {
-            std::vector< std::pair< float, float > > loglist; 
+            bool converged( false );
             auto prev_time( system_clock->getTime() ); 
             while( ! term )
             {
                const auto stop_time( 
-                  data.sample_frequency + system_clock->getTime() );
+                  data.frequency.curr_frame_width + system_clock->getTime() );
                while( system_clock->getTime() < stop_time  && ! term )
                {
 #if __x86_64            
@@ -169,8 +169,16 @@ protected:
                if( write_copy.blocked == 0 && 
                      arrival_started  && ! buffer.write_finished ) 
                {
-                  data.items_arrived += write_copy.count;
-                  data.arrived_samples++;
+                  if( converged )
+                  {
+                     data.arrival.items += write_copy.count;
+                     data.arrival.frame_count++;
+                  }
+                  else
+                  {
+                     data.arrival.items += 0;
+                     data.arrival.frame_count += 0;
+                  }
                }
                
                /**
@@ -180,29 +188,30 @@ protected:
                 */
                if( read_copy.blocked == 0 )
                {
-                  data.items_departed += read_copy.count;
-                  data.departed_samples++;
+                  data.departure.items += read_copy.count;
+                  data.departure.frame_count++;
                }
-               prev_time = system_clock->getTime();
-               
-               data.total_occupancy += buffer.size();
-               data.samples         += 1;
-               log.push_back( std::make_pair( data.sample_frequency,
-                                              
+               data.mean_occupancy.items        += buffer.size();
+               data.mean_occupancy.frame_count  += 1;
+               const auto total_time( clock->getTime() - prev_time );
+
+               data.resolution.updateResolution( qd.resolution,
+                                                 total_time );
+               prev_time = total_time;
             }
 
             /** log **/
-            std::ofstream ofs( "/tmp/log.csv" );
-            if( ! ofs.is_open() )
-            {
-               std::cerr << "Failed to open output log\n";
-               exit( EXIT_FAILURE );
-            }
-            for( auto pair : loglist )
-            {
-               ofs << pair.first << "," << pair.second << "\n";
-            }
-            ofs.close();
+            //std::ofstream ofs( "/tmp/log.csv" );
+            //if( ! ofs.is_open() )
+            //{
+            //   std::cerr << "Failed to open output log\n";
+            //   exit( EXIT_FAILURE );
+            //}
+            //for( auto pair : loglist )
+            //{
+            //   ofs << pair.first << "," << pair.second << "\n";
+            //}
+            //ofs.close();
          }
          break;
          case( RingBufferType::Infinite ):
