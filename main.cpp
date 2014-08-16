@@ -17,7 +17,7 @@
 #include "randomstring.tcc"
 #include "signalvars.hpp"
 
-#define MAX_VAL 10000000
+#define MAX_VAL 100000000
 
 
 
@@ -31,7 +31,7 @@ struct Data
 
 //#define USESharedMemory 1
 #define USELOCAL 1
-#define BUFFSIZE 100
+#define BUFFSIZE 1000000000
 
 #ifdef USESharedMemory
 typedef RingBuffer< std::int64_t, 
