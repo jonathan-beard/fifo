@@ -23,9 +23,13 @@
 
 struct Data
 {
-   Data( std::int64_t send ) : send_count(  send )
+   Data( std::int64_t send ) : send_count(  send ),
+                               start_time( 0 ),
+                               end_time( 0 )
    {}
    std::int64_t          send_count;
+   double                start_time;
+   double                end_time;
 } data( MAX_VAL );
 
 
@@ -54,6 +58,7 @@ producer( Data &data, TheBuffer &buffer )
 #if LIMITRATE   
    const float serviceTime( 10e-6 );
 #endif   
+   data.start_time = system_clock->getTime();
    while( current_count++ < data.send_count )
    {
       //auto &ref( buffer.allocate() );
@@ -70,7 +75,7 @@ producer( Data &data, TheBuffer &buffer )
 }
 
 void 
-consumer( TheBuffer &buffer )
+consumer( Data &data, TheBuffer &buffer )
 {
    std::int64_t   current_count( 0 );
 #if LIMITRATE   
@@ -85,6 +90,7 @@ consumer( TheBuffer &buffer )
       while( endTime > system_clock->getTime() );
 #endif
    }
+   data.end_time = system_clock->getTime();
    assert( current_count == MAX_VAL );
    return;
 }
@@ -140,17 +146,16 @@ std::string test()
    
 #elif defined USELOCAL
    TheBuffer buffer( BUFFSIZE );
-   const auto start( system_clock->getTime() );
    std::thread a( producer, 
                   std::ref( data ), 
                   std::ref( buffer ) );
 
-   std::thread b( consumer, 
+   std::thread b( consumer,
+                  std::ref( data ),
                   std::ref( buffer ) );
    a.join();
    b.join();
-   const auto end( system_clock->getTime() );
-   total_seconds = (end - start);
+   total_seconds = ( data.end_time - data.start_time );
 #endif
    std::stringstream ss;
    ss << "Time: " << total_seconds << "s\n";
