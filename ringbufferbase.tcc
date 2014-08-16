@@ -39,7 +39,7 @@
  * writes or blocking for space, otherwise blocking will
  * actively spin while waiting.
  */
-//#define NICE 1
+#define NICE 1
 
 extern Clock *system_clock;
 
@@ -186,10 +186,10 @@ public:
 #ifdef NICE      
          std::this_thread::yield();
 #endif         
-         if( write_stats.blocked == 0 )
-         {   
-            write_stats.blocked = 1;
-         }
+         //if( write_stats.blocked == 0 )
+         //{   
+         //   write_stats.blocked = 1;
+         //}
 #if __x86_64
          __asm__ volatile("\
            pause"
@@ -215,7 +215,7 @@ public:
       const size_t write_index( Pointer::val( data->write_pt ) );
       data->signal[ write_index ].sig = signal;
       Pointer::inc( data->write_pt );
-      write_stats.count++;
+      //write_stats.count++;
       if( signal == RBSignal::RBEOF )
       {
          (this)->write_finished = true;
@@ -235,10 +235,10 @@ public:
 #ifdef NICE      
          std::this_thread::yield();
 #endif         
-         if( write_stats.blocked == 0 )
-         {   
-            write_stats.blocked = 1;
-         }
+         //if( write_stats.blocked == 0 )
+         //{   
+         //   write_stats.blocked = 1;
+         //}
 #if __x86_64
          __asm__ volatile("\
            pause"
@@ -252,7 +252,7 @@ public:
 	   data->store[ write_index ].item     = item;
 	   data->signal[ write_index ].sig   = signal;
 	   Pointer::inc( data->write_pt );
-	   write_stats.count++;
+	   //write_stats.count++;
       if( signal == RBSignal::RBEOF )
       {
          (this)->write_finished = true;
@@ -281,10 +281,10 @@ public:
 #ifdef NICE
             std::this_thread::yield();
 #endif
-            if( write_stats.blocked == 0 )
-            {
-               write_stats.blocked = 1;
-            }
+            //if( write_stats.blocked == 0 )
+            //{
+            //   write_stats.blocked = 1;
+            //}
          }
          const size_t write_index( Pointer::val( data->write_pt ) );
          data->store[ write_index ].item = (*begin);
@@ -299,7 +299,7 @@ public:
             data->signal[ write_index ].sig = RBSignal::NONE;
          }
          Pointer::inc( data->write_pt );
-         write_stats.count++;
+         //write_stats.count++;
          begin++;
       }
       if( signal == RBSignal::RBEOF )
@@ -323,10 +323,10 @@ public:
 #ifdef NICE      
          std::this_thread::yield();
 #endif        
-         if( read_stats.blocked == 0 )
-         {   
-            read_stats.blocked  = 1;
-         }
+         //if( read_stats.blocked == 0 )
+         //{   
+         //   read_stats.blocked  = 1;
+         //}
 #if __x86_64
          __asm__ volatile("\
            pause"
@@ -342,7 +342,7 @@ public:
       }
       item = data->store[ read_index ].item;
       Pointer::inc( data->read_pt );
-      read_stats.count++;
+      //read_stats.count++;
    }
 
    /**
@@ -361,10 +361,10 @@ public:
 #ifdef NICE
          std::this_thread::yield();
 #endif
-         if( read_stats.blocked == 0 )
-         {
-            read_stats.blocked = 1;
-         }
+         //if( read_stats.blocked == 0 )
+         //{
+         //   read_stats.blocked = 1;
+         //}
       }
      
       size_t read_index;
@@ -376,7 +376,7 @@ public:
             output[ i ]       = data->store[ read_index ].item;
             (*signal)[ i ]    = data->signal[ read_index ].sig;
             Pointer::inc( data->read_pt );
-            read_stats.count++;
+            //read_stats.count++;
          }
       }
       else /** ignore signal **/
@@ -387,7 +387,7 @@ public:
             read_index( Pointer::val( data->read_pt ) );
             output[ i ]    = data->store[ read_index ].item;
             Pointer::inc( data->read_pt );
-            read_stats.count++;
+            //read_stats.count++;
          }
 
       }
@@ -436,7 +436,7 @@ public:
    {
       assert( range <= data->max_cap );
       Pointer::incBy( range, data->read_pt );
-      read_stats.count += range;
+      //read_stats.count += range;
    }
 
 protected:
@@ -619,7 +619,7 @@ public:
       {
          *signal = data->signal[ 0 ].sig;
       }
-      read_stats.count++;
+      //read_stats.count++;
    }
   
    /**
@@ -679,7 +679,7 @@ public:
     */
    void recycle( const size_t range = 1 )
    {
-      read_stats.count += range;
+      //read_stats.count += range;
    }
 
 protected:

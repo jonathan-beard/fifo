@@ -9,13 +9,15 @@
 #include <fstream>
 #include <cassert>
 #include <cinttypes>
+#include <cmath>
+
 #include "procwait.hpp"
 #include "ringbuffer.tcc"
 #include "SystemClock.tcc"
 #include "randomstring.tcc"
 #include "signalvars.hpp"
 
-#define MAX_VAL 100000000
+#define MAX_VAL 10000000
 
 
 
@@ -49,12 +51,14 @@ void
 producer( Data &data, TheBuffer &buffer )
 {
    std::int64_t current_count( 0 );
+#if LIMITRATE   
    const float serviceTime( 10e-6 );
+#endif   
    while( current_count++ < data.send_count )
    {
-      auto &ref( buffer.allocate() );
-      ref = current_count;
-      buffer.push( /* current_count, */ 
+      //auto &ref( buffer.allocate() );
+      //ref = current_count;
+      buffer.push( current_count,
          (current_count == data.send_count ? 
           RBSignal::RBEOF : RBSignal::NONE ) );
 #if LIMITRATE
@@ -69,7 +73,9 @@ void
 consumer( TheBuffer &buffer )
 {
    std::int64_t   current_count( 0 );
+#if LIMITRATE   
    const float serviceTime( 5e-6 );
+#endif   
    RBSignal signal( RBSignal::NONE );
    while( signal != RBSignal::RBEOF )
    {
@@ -85,12 +91,14 @@ consumer( TheBuffer &buffer )
 
 std::string test()
 {
+   double total_seconds( 0.0 );
 #ifdef USESharedMemory
    char shmkey[ 256 ];
    SHM::GenKey( shmkey, 256 );
    std::string key( shmkey );
    ProcWait *proc_wait( new ProcWait( 1 ) ); 
    const pid_t child( fork() );
+   double start( 0.0 );
    switch( child )
    {
       case( 0 /* CHILD */ ):
@@ -112,11 +120,13 @@ std::string test()
       break;
       default: /* parent */
       {
+          
          proc_wait->AddProcess( child );
          TheBuffer buffer_a( BUFFSIZE,
                              key, 
                              Direction::Producer, 
                              false);
+         start = system_clock->getTime();
          /** call producer directly **/
          producer( data, buffer_a );
       }
@@ -124,11 +134,13 @@ std::string test()
   
    /** parent waits for child **/
    proc_wait->WaitForChildren();
-
+   const auto end( system_clock->getTime() );
+   total_seconds = (end - start);
    delete( proc_wait );
    
 #elif defined USELOCAL
    TheBuffer buffer( BUFFSIZE );
+   const auto start( system_clock->getTime() );
    std::thread a( producer, 
                   std::ref( data ), 
                   std::ref( buffer ) );
@@ -137,15 +149,14 @@ std::string test()
                   std::ref( buffer ) );
    a.join();
    b.join();
+   const auto end( system_clock->getTime() );
+   total_seconds = (end - start);
 #endif
-#if USESharedMemory   
-   return( "done" );
-#else
-   auto &monitor_data( buffer.getQueueData() );
    std::stringstream ss;
-   Monitor::QueueData::print( monitor_data, Monitor::QueueData::Bytes, ss, false);
+   ss << "Time: " << total_seconds << "s\n";
+   ss << "Rate: " << (( MAX_VAL * sizeof( std::int64_t ) ) / std::pow(2,20) ) / total_seconds << " MB/s\n";
+   ss << "\n";
    return( ss.str() );
-#endif
 }
 
 
@@ -161,7 +172,7 @@ main( int argc, char **argv )
    //   std::cerr << "Couldn't open ofstream!!\n";
    //   exit( EXIT_FAILURE );
    //}
-   int runs( 1 );
+   int runs( 10 );
    while( runs-- )
    {
        std::cout << test() << "\n";
