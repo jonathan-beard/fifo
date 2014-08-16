@@ -38,7 +38,7 @@ typedef RingBuffer< std::int64_t,
 #elif defined USELOCAL
 typedef RingBuffer< std::int64_t          /* buffer type */,
                     RingBufferType::Heap  /* allocation type */,
-                    true                  /* turn on monitoring */ >  TheBuffer;
+                    false                 /* turn off monitoring */ >  TheBuffer;
 #endif
 
 
