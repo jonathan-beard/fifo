@@ -108,48 +108,6 @@ public:
    }
 
    
-   /**
-    * get_signal - returns a reference to the signal mask for this
-    * queue. TODO this function won't necessarily work as advertised
-    * as it needs its own FIFO to deliver signals properly.
-    * @return volatile RBSignal&
-    */
-   RBSignal get_signal()
-   {
-#if 0      
-      /** 
-       * there are two signalling paths, the one 
-       * we'll give the highest priority to is the 
-       * asynchronous one.
-       */
-      const auto head( Pointer::val( data->read_pt ) );
-      const auto signal_queue( data->store[ head ].signal );
-      const auto curr_size( (this)->size() );
-      if( curr_size > 0 ) 
-      {
-         return( signal_queue );
-      }
-      /** there must be something in the local signal **/
-      struct{
-         RBSignal a;
-         RBSignal b;
-      }copy;
-      do
-      {
-         copy.a = (this)->signal_a;
-         copy.b = (this)->signal_b;
-      }while( copy.a != copy.b );
-
-      //(this)->signal_a = RBSignal::NONE;
-      //(this)->signal_b = RBSignal::NONE;
-#endif
-      return( RBSignal::NONE );
-   }
-  
-   void send_signal( const RBSignal &signal )
-   {
-      //TODO, fixme
-   }
 
    /**
     * space_avail - returns the amount of space currently
@@ -186,10 +144,6 @@ public:
 #ifdef NICE      
          std::this_thread::yield();
 #endif         
-         //if( write_stats.blocked == 0 )
-         //{   
-         //   write_stats.blocked = 1;
-         //}
 #if __x86_64
          __asm__ volatile("\
            pause"
@@ -213,9 +167,8 @@ public:
    {
       if( ! (this)->allocate_called ) return;
       const size_t write_index( Pointer::val( data->write_pt ) );
-      data->store[ write_index ].sig = signal;
+      data->signal[ write_index ].sig = signal;
       Pointer::inc( data->write_pt );
-      //write_stats.count++;
       if( signal == RBSignal::RBEOF )
       {
          (this)->write_finished = true;
@@ -235,10 +188,6 @@ public:
 #ifdef NICE      
          std::this_thread::yield();
 #endif         
-         //if( write_stats.blocked == 0 )
-         //{   
-         //   write_stats.blocked = 1;
-         //}
 #if __x86_64
          __asm__ volatile("\
            pause"
@@ -249,10 +198,9 @@ public:
       }
       
 	   const size_t write_index( Pointer::val( data->write_pt ) );
-	   data->store[ write_index ].item  = item;
-	   data->store[ write_index ].sig   = signal;
+	   data->store[ write_index ].item     = item;
+	   data->signal[ write_index ].sig   = signal;
 	   Pointer::inc( data->write_pt );
-	   //write_stats.count++;
       if( signal == RBSignal::RBEOF )
       {
          (this)->write_finished = true;
@@ -281,10 +229,6 @@ public:
 #ifdef NICE
             std::this_thread::yield();
 #endif
-            //if( write_stats.blocked == 0 )
-            //{
-            //   write_stats.blocked = 1;
-            //}
          }
          const size_t write_index( Pointer::val( data->write_pt ) );
          data->store[ write_index ].item = (*begin);
@@ -292,14 +236,13 @@ public:
          /** add signal to last el only **/
          if( begin == ( end - 1 ) )
          {
-            data->store[ write_index ].sig = signal;
+            data->signal[ write_index ].sig = signal;
          }
          else
          {
-            data->store[ write_index ].sig = RBSignal::NONE;
+            data->signal[ write_index ].sig = RBSignal::NONE;
          }
          Pointer::inc( data->write_pt );
-         //write_stats.count++;
          begin++;
       }
       if( signal == RBSignal::RBEOF )
@@ -323,10 +266,6 @@ public:
 #ifdef NICE      
          std::this_thread::yield();
 #endif        
-         //if( read_stats.blocked == 0 )
-         //{   
-         //   read_stats.blocked  = 1;
-         //}
 #if __x86_64
          __asm__ volatile("\
            pause"
@@ -338,11 +277,10 @@ public:
       const size_t read_index( Pointer::val( data->read_pt ) );
       if( signal != nullptr )
       {
-         *signal = data->store[ read_index ].sig;
+         *signal = data->signal[ read_index ].sig;
       }
       item = data->store[ read_index ].item;
       Pointer::inc( data->read_pt );
-      //read_stats.count++;
    }
 
    /**
@@ -361,10 +299,6 @@ public:
 #ifdef NICE
          std::this_thread::yield();
 #endif
-         //if( read_stats.blocked == 0 )
-         //{
-         //   read_stats.blocked = 1;
-         //}
       }
      
       size_t read_index;
@@ -374,9 +308,8 @@ public:
          {
             read_index( Pointer::val( data->read_pt ) );
             output[ i ]       = data->store[ read_index ].item;
-            (*signal)[ i ]    = data->store[ read_index ].sig;
+            (*signal)[ i ]    = data->signal[ read_index ].sig;
             Pointer::inc( data->read_pt );
-            //read_stats.count++;
          }
       }
       else /** ignore signal **/
@@ -387,7 +320,6 @@ public:
             read_index( Pointer::val( data->read_pt ) );
             output[ i ]    = data->store[ read_index ].item;
             Pointer::inc( data->read_pt );
-            //read_stats.count++;
          }
 
       }
@@ -420,7 +352,7 @@ public:
       const size_t read_index( Pointer::val( data->read_pt ) );
       if( signal != nullptr )
       {
-         *signal = data->store[ read_index ].sig;
+         *signal = data->signal[ read_index ].sig;
       }
       T &output( data->store[ read_index ].item );
       return( output );
@@ -436,7 +368,6 @@ public:
    {
       assert( range <= data->max_cap );
       Pointer::incBy( range, data->read_pt );
-      //read_stats.count += range;
    }
 
 protected:
@@ -445,12 +376,6 @@ protected:
     * buffer.
     */
    Buffer::Data< T, type>      *data;
-   /**
-    * these two should go inside the buffer, they'll
-    * be accessed via the monitoring system.
-    */
-   volatile Blocked             read_stats;
-   volatile Blocked             write_stats;
    /** 
     * This should be okay outside of the buffer, its local 
     * to the writing thread.  Variable gets set "true" in
@@ -567,8 +492,7 @@ public:
    void push( const RBSignal signal = RBSignal::NONE )
    {
       if( ! (this)->allocate_called ) return;
-      data->store[ 0 ].sig = signal;
-      write_stats.count++;
+      data->signal[ 0 ].sig = signal;
       (this)->allocate_called = false;
    }
 
@@ -579,10 +503,9 @@ public:
     */
    void  push( T &item, const RBSignal signal = RBSignal::NONE )
    {
-      /** a bit awkward since it gives the same behavior as the actual queue **/
       data->store [ 0 ].item  = item;
-      data->store[ 0 ].sig    = signal;
-      write_stats.count++;
+      /** a bit awkward since it gives the same behavior as the actual queue **/
+      data->signal[ 0 ].sig  = signal;
    }
 
    /**
@@ -600,12 +523,10 @@ public:
       {
          data->store[ 0 ].item = (*begin);
          begin++;
-         write_stats.count++;
       }
-      data->store[ 0 ].sig = signal;
+      data->signal[ 0 ].sig = signal;
    }
  
-
    /**
     * pop - This version won't return any useful data,
     * its just whatever is in the buffer which should be zeros.
@@ -617,9 +538,8 @@ public:
       item  = data->store[ 0 ].item;
       if( signal != nullptr )
       {
-         *signal = data->store[ 0 ].sig;
+         *signal = data->signal[ 0 ].sig;
       }
-      //read_stats.count++;
    }
   
    /**
@@ -641,7 +561,7 @@ public:
          for( size_t i( 0 ); i < N; i++ )
          {
             output[ i ]     = data->store [ 0 ].item;
-            (*signal)[ i ]  = data->store[ 0 ].sig;
+            (*signal)[ i ]  = data->signal[ 0 ].sig;
          }
       }
       else
@@ -666,7 +586,7 @@ public:
       T &output( data->store[ 0 ].item );
       if( signal != nullptr )
       {
-         *signal = data->store[  0  ].sig;
+         *signal = data->signal[  0  ].sig;
       }
       return( output );
    }
@@ -679,15 +599,11 @@ public:
     */
    void recycle( const size_t range = 1 )
    {
-      //read_stats.count += range;
    }
 
 protected:
    /** go ahead and allocate a buffer as a heap, doesn't really matter **/
    Buffer::Data< T, RingBufferType::Heap >      *data;
-   /** note, these need to get moved into the data struct **/
-   volatile Blocked                             read_stats;
-   volatile Blocked                             write_stats;
    volatile bool                                allocate_called;
    volatile bool                                write_finished;
 };

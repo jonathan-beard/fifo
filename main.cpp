@@ -35,7 +35,7 @@ struct Data
 
 //#define USESharedMemory 1
 #define USELOCAL 1
-#define BUFFSIZE 1000000000
+#define BUFFSIZE 100
 
 #ifdef USESharedMemory
 typedef RingBuffer< std::int64_t, 
@@ -61,9 +61,9 @@ producer( Data &data, TheBuffer &buffer )
    data.start_time = system_clock->getTime();
    while( current_count++ < data.send_count )
    {
-      //auto &ref( buffer.allocate() );
-      //ref = current_count;
-      buffer.push( current_count,
+      auto &ref( buffer.allocate() );
+      ref = current_count;
+      buffer.push( /*current_count,*/
          (current_count == data.send_count ? 
           RBSignal::RBEOF : RBSignal::NONE ) );
 #if LIMITRATE

@@ -43,7 +43,6 @@ template < class X > struct Element
    /** default constructor **/
    Element()
    {
-      sig = RBSignal::NONE;
    }
    /**
     * Element - copy constructor, the type
@@ -55,13 +54,24 @@ template < class X > struct Element
    Element( const Element< X > &other )
    {
       (this)->item   = other.item;
-      (this)->sig    = other.sig;
    }
 
-   X        item;
-   RBSignal sig;
+   X item;
 };
 
+struct Signal
+{
+   Signal() : sig( RBSignal::NONE )
+   {
+   }
+
+   Signal( const Signal &other )
+   {
+      (this)->sig = other.sig;
+   }
+
+   RBSignal sig;
+};
 
 /**
  * DataBase - not quite the best name since we 
@@ -73,18 +83,30 @@ template < class T > struct DataBase
    DataBase( const size_t max_cap ) : read_pt ( nullptr ),
                                       write_pt( nullptr ),
                                       max_cap ( max_cap ),
-                                      store   ( nullptr )
+                                      store   ( nullptr ),
+                                      signal  ( nullptr )
    {
 
       length_store   = ( sizeof( Element< T > ) * max_cap ); 
+      length_signal  = ( sizeof( Signal ) * max_cap );
    }
 
    Pointer           *read_pt;
    Pointer           *write_pt;
    size_t             max_cap;
-   
+   /** 
+    * allocating these as structs gives a bit
+    * more flexibility later in what to pass
+    * along with the queue.  It'll be more 
+    * efficient copy wise to pass extra items
+    * in the signal, but conceivably there could
+    * be a case for adding items in the store
+    * as well.
+    */
    Element< T >      *store;
+   Signal            *signal;
    size_t             length_store;
+   size_t             length_signal;
 };
 
 template < class T, 
@@ -105,6 +127,14 @@ template < class T,
          exit( EXIT_FAILURE );
       }
       
+      errno = 0;
+      (this)->signal = (Signal*)       calloc( (this)->length_signal,
+                                               sizeof( Signal ) );
+      if( (this)->signal == nullptr )
+      {
+         perror( "Failed to allocate signal queue!" );
+         exit( EXIT_FAILURE );
+      }
       /** allocate read and write pointers **/
       /** TODO, see if there are optimizations to be made with sizing and alignment **/
       (this)->read_pt   = new Pointer( max_cap );
@@ -121,7 +151,8 @@ template < class T,
       //FREE USED HERE
       std::memset( (this)->store, 0, ( sizeof( Element< T > ) * (this)->max_cap ) );
       free( (this)->store );
-      (this)->store = nullptr;
+      std::memset( (this)->signal, 0, ( sizeof( Signal ) * (this)->max_cap ) );
+      free( (this)->signal );
    }
 
 };
@@ -145,6 +176,7 @@ template < class T > struct Data< T, RingBufferType::SharedMemory > :
          Direction dir,
          const size_t alignment ) : DataBase< T >( max_cap ),
                                     store_key( shm_key + "_store" ),
+                                    signal_key( shm_key + "_key" ),
                                     ptr_key( shm_key + "_ptr" )
    {
       /** now work through opening SHM **/
@@ -171,6 +203,9 @@ template < class T > struct Data< T, RingBufferType::SharedMemory > :
             alloc_with_error( (void**)&(this)->store, 
                               (this)->length_store, 
                               store_key.c_str() );
+            alloc_with_error( (void**)&(this)->signal, 
+                              (this)->length_signal, 
+                              signal_key.c_str() );
             alloc_with_error( (void**)&(this)->read_pt, 
                               (sizeof( Pointer ) * 2 ) + sizeof( Cookie ), 
                               ptr_key.c_str() );
@@ -219,9 +254,11 @@ template < class T > struct Data< T, RingBufferType::SharedMemory > :
                SUCCESS:;
             };
             retry_func( (void**) &(this)->store,  store_key.c_str() );
+            retry_func( (void**) &(this)->signal, signal_key.c_str() );
             retry_func( (void**) &(this)->read_pt, ptr_key.c_str() );
             
             assert( (this)->store != nullptr );
+            assert( (this)->signal != nullptr );
             assert( (this)->read_pt   != nullptr );
             
             /** fix write_pt **/
@@ -258,6 +295,11 @@ template < class T > struct Data< T, RingBufferType::SharedMemory > :
                   (this)->length_store,
                   false,
                   true );
+      SHM::Close( signal_key.c_str(),
+                  (void*) (this)->signal,
+                  (this)->length_signal,
+                  false,
+                  true );
       SHM::Close( ptr_key.c_str(),   
                   (void*) (this)->read_pt, 
                   (sizeof( Pointer ) * 2) + sizeof( Cookie ),
@@ -274,6 +316,7 @@ template < class T > struct Data< T, RingBufferType::SharedMemory > :
 
    /** process local key copies **/
    const std::string store_key; 
+   const std::string signal_key;  
    const std::string ptr_key; 
 };
 }
