@@ -137,7 +137,7 @@ protected:
             while( ! term )
             {
                const auto stop_time( 
-                  data.frequency.curr_frame_width + system_clock->getTime() );
+                  data.resolution.curr_frame_width + system_clock->getTime() );
                while( system_clock->getTime() < stop_time  && ! term )
                {
 #if __x86_64            
@@ -169,7 +169,7 @@ protected:
                if( write_copy.blocked == 0 && 
                      arrival_started  && ! buffer.write_finished ) 
                {
-                  frame_resolution::setBlockedStatus( data.resolution,
+                  Monitor::frame_resolution::setBlockedStatus( data.resolution,
                                                       false );
                   if( converged )
                   {
@@ -197,7 +197,7 @@ protected:
                {
                   frame_resolution::setBlockedStatus( data.resolution,
                                                       false );
-                  if( converted )
+                  if( converged )
                   {
                      data.departure.items       += read_copy.count;
                      data.departure.frame_count += 1;
@@ -210,12 +210,12 @@ protected:
                }
                else
                {
-                  frame_resolution::setBlockedStatus( data.resolution,
+                  Monitor::frame_resolution::setBlockedStatus( data.resolution,
                                                       true );
                }
                data.mean_occupancy.items        += buffer.size();
                data.mean_occupancy.frame_count  += 1;
-               const auto total_time( clock->getTime() - prev_time );
+               const auto total_time( system_clock->getTime() - prev_time );
 
                data.resolution.updateResolution( qd.resolution,
                                                  total_time );

@@ -21,6 +21,8 @@
 #define _MONITOR_HPP_  1
 #include <cstdint>
 #include <cstring>
+#include <cmath>
+
 #include "Clock.hpp"
 #include "ringbuffertypes.hpp"
 
@@ -65,7 +67,7 @@ namespace Monitor
                       sizeof( bool ) * NUMFRAMES );
       }
 
-      static void setBlockedStatus( frame_resolution &frame,
+      static void setBlockedStatus( volatile frame_resolution &frame,
                                     Direction         dir,
                                     const bool blocked = false )
       {
@@ -81,7 +83,7 @@ namespace Monitor
        * @param   frame - frame resolution reference.
        * @return  bool - true if the queue was blocked in NUMFRAMES
        */
-      static bool wasBlocked( frame_resolution &frame )
+      static bool wasBlocked( volatile frame_resolution &frame )
       {
          for( auto i( 0 ); i < NUMFRAMES; i++ )
          {
@@ -101,21 +103,17 @@ namespace Monitor
        * @param   realized_frame_time - actual time to go through loop
        * @return  bool
        */
-      static bool updateResolution( frame_resolution &frame,
+      static bool updateResolution( volatile frame_resolution &frame,
                                     sclock_t          realized_frame_time )
       {
          const auto p_diff( 
          ( realized_frame_time - frame.curr_frame_width ) /
             frame.curr_frame_width );
-         if( p_diff < 0 && p_diff < ( -CONVERGENCE ) )
+         if( ( p_diff < 0 && p_diff < ( -CONVERGENCE ) ) || ( p_diff > CONVERGENCE ) )
          {
-            frame.curr_frame_width = frame.curr_frame_width**2; 
+            frame.curr_frame_width = ( frame.curr_frame_width * 
+                                          frame.curr_frame_width ); 
              return( false );
-         }
-         else if( p_diff > CONVERGENCE )
-         {
-            frame.curr_frame_width = frame.curr_frame_width**2; 
-            return( false );
          }
          //else
          return( true );
@@ -152,7 +150,7 @@ namespace Monitor
             return( 0.0 );
          }
          return( ( (((double)qd.arrival.items ) * qd.item_unit) / 
-                     (qd.frequency.curr_frame_width * 
+                     (qd.resolution.curr_frame_width * 
                         (double)qd.arrival.frame_count ) ) * 
                            (double)unit_conversion[ unit ] );
       }
@@ -165,7 +163,7 @@ namespace Monitor
             return( 0.0 );
          }
          return( ( (((double)qd.departure.items ) * qd.item_unit ) / 
-                     (qd.frequency.curr_frame_width * 
+                     (qd.resolution.curr_frame_width * 
                         (double)qd.departure.frame_count ) ) * 
                            (double)unit_conversion[ unit ] );
       }
