@@ -132,6 +132,7 @@ protected:
       {
          case( RingBufferType::Heap ):
          {
+            std::vector< double > loglist;
             bool converged( false );
             auto prev_time( system_clock->getTime() ); 
             while( ! term )
@@ -169,7 +170,9 @@ protected:
                if( write_copy.blocked == 0 && 
                      arrival_started  && ! buffer.write_finished ) 
                {
-                  Monitor::frame_resolution::setBlockedStatus( data.resolution,
+                  Monitor::frame_resolution::setBlockedStatus( 
+                                                      data.resolution,
+                                                      Direction::Producer,
                                                       false );
                   if( converged )
                   {
@@ -184,7 +187,8 @@ protected:
                }
                else
                {
-                  frame_resolution::setBlockedStatus( data.resolution,
+                  Monitor::frame_resolution::setBlockedStatus( data.resolution,
+                                                      Direction::Producer,
                                                       true );
                }
                
@@ -195,7 +199,8 @@ protected:
                 */
                if( read_copy.blocked == 0 )
                {
-                  frame_resolution::setBlockedStatus( data.resolution,
+                  Monitor::frame_resolution::setBlockedStatus( data.resolution,
+                                                      Direction::Consumer,
                                                       false );
                   if( converged )
                   {
@@ -204,36 +209,41 @@ protected:
                   }
                   else
                   {
-                     data.departure.items      += 0;
-                     data.departure.frame_cunt += 0;
+                     data.departure.items       += 0;
+                     data.departure.frame_count += 0;
                   }
                }
                else
                {
-                  Monitor::frame_resolution::setBlockedStatus( data.resolution,
+                  Monitor::frame_resolution::setBlockedStatus( 
+                                                      data.resolution,
+                                                      Direction::Consumer,
                                                       true );
                }
                data.mean_occupancy.items        += buffer.size();
                data.mean_occupancy.frame_count  += 1;
                const auto total_time( system_clock->getTime() - prev_time );
 
-               data.resolution.updateResolution( qd.resolution,
+               Monitor::frame_resolution::updateResolution( 
+                                                 data.resolution,
                                                  total_time );
                prev_time = total_time;
+               loglist.push_back( (double) data.resolution.curr_frame_width );
             }
 
             /** log **/
-            //std::ofstream ofs( "/tmp/log.csv" );
-            //if( ! ofs.is_open() )
-            //{
-            //   std::cerr << "Failed to open output log\n";
-            //   exit( EXIT_FAILURE );
-            //}
-            //for( auto pair : loglist )
-            //{
-            //   ofs << pair.first << "," << pair.second << "\n";
-            //}
-            //ofs.close();
+            std::ofstream ofs( "/tmp/log.csv" );
+            if( ! ofs.is_open() )
+            {
+               std::cerr << "Failed to open output log\n";
+               exit( EXIT_FAILURE );
+            }
+            for( auto pair : loglist )
+            {
+               /** not really a pair anymore, double **/
+               ofs << pair << "\n";
+            }
+            ofs.close();
          }
          break;
          case( RingBufferType::Infinite ):
@@ -243,8 +253,8 @@ protected:
              * the multiplication above works out for the infinite
              * queue.
              */
-            data.departed_samples = 1;
-            data.arrived_samples  = 1;
+            data.departure.frame_count = 1;
+            data.arrival.frame_count   = 1;
             const auto start_time( system_clock->getTime() );
             while( ! term )
             {
@@ -254,13 +264,13 @@ protected:
                      :
                      :
                      : );
-#endif               
-               const auto end_time(   system_clock->getTime() );
-               data.items_arrived   = buffer.write_stats.count;
-               data.items_departed  = buffer.read_stats.count;
-               /** set sample frequency to time diff **/
-               data.sample_frequency = ( end_time - start_time );
+#endif              
             }
+            const auto end_time(   system_clock->getTime() );
+            data.arrival.items   = buffer.write_stats.count;
+            data.departure.items = buffer.read_stats.count;
+            /** set sample frequency to time diff **/
+            data.resolution.curr_frame_width = ( end_time - start_time );
          }
          break;
          default:

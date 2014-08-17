@@ -27,7 +27,7 @@
 #include "ringbuffertypes.hpp"
 
 #define NUMFRAMES    5
-#define CONVERGENCE .01
+#define CONVERGENCE .1
 
 namespace Monitor
 {
@@ -109,11 +109,21 @@ namespace Monitor
          const auto p_diff( 
          ( realized_frame_time - frame.curr_frame_width ) /
             frame.curr_frame_width );
-         if( ( p_diff < 0 && p_diff < ( -CONVERGENCE ) ) || ( p_diff > CONVERGENCE ) )
+         if( frame.curr_frame_width == 0 )
          {
-            frame.curr_frame_width = ( frame.curr_frame_width * 
-                                          frame.curr_frame_width ); 
-             return( false );
+            frame.curr_frame_width = realized_frame_time;
+            return( false );
+         }
+         if ( p_diff < 0 ) 
+         {
+            if( p_diff < ( -CONVERGENCE ) )
+            {
+               /** increment **/
+            }
+         }
+         else if ( p_diff > CONVERGENCE )
+         {
+            
          }
          //else
          return( true );
