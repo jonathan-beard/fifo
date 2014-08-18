@@ -227,7 +227,7 @@ protected:
                Monitor::frame_resolution::updateResolution( 
                                                  data.resolution,
                                                  total_time );
-               prev_time = total_time;
+               prev_time = system_clock->getTime();
                loglist.push_back( (double) data.resolution.curr_frame_width );
             }
 

@@ -29,6 +29,8 @@
 #define NUMFRAMES    5
 #define CONVERGENCE .1
 
+extern Clock *system_clock;
+
 namespace Monitor
 {
    /**
@@ -65,6 +67,7 @@ namespace Monitor
          std::memset( frame_blocked, 
                       0x0, 
                       sizeof( bool ) * NUMFRAMES );
+         curr_frame_width =  system_clock->getResolution(); 
       }
 
       static void setBlockedStatus( volatile frame_resolution &frame,
@@ -87,7 +90,7 @@ namespace Monitor
       {
          for( auto i( 0 ); i < NUMFRAMES; i++ )
          {
-            if( frame.frame_blocked[ i ][ 0 ] && frame.frame_blocked[ i ][ 1 ] )
+            if( frame.frame_blocked[ i ][ 0 ] || frame.frame_blocked[ i ][ 1 ] )
             {
                return( true );
             }
@@ -106,24 +109,22 @@ namespace Monitor
       static bool updateResolution( volatile frame_resolution &frame,
                                     sclock_t          realized_frame_time )
       {
-         const auto p_diff( 
+         const double p_diff( 
          ( realized_frame_time - frame.curr_frame_width ) /
             frame.curr_frame_width );
-         if( frame.curr_frame_width == 0 )
-         {
-            frame.curr_frame_width = realized_frame_time;
-            return( false );
-         }
+         fprintf( stderr, "%f\n", p_diff );
          if ( p_diff < 0 ) 
          {
             if( p_diff < ( -CONVERGENCE ) )
             {
-               /** increment **/
+               frame.curr_frame_width *= 2;
+               return( false );
             }
          }
          else if ( p_diff > CONVERGENCE )
          {
-            
+            frame.curr_frame_width *= 2;
+            return( false );
          }
          //else
          return( true );
