@@ -132,7 +132,7 @@ protected:
       {
          case( RingBufferType::Heap ):
          {
-            std::vector< double > loglist;
+            std::vector< std::pair< double, double > > loglist;
             bool converged( false );
             auto prev_time( system_clock->getTime() ); 
             while( ! term )
@@ -223,12 +223,18 @@ protected:
                data.mean_occupancy.items        += buffer.size();
                data.mean_occupancy.frame_count  += 1;
                const auto total_time( system_clock->getTime() - prev_time );
-
-               Monitor::frame_resolution::updateResolution( 
-                                                 data.resolution,
-                                                 total_time );
                prev_time = system_clock->getTime();
-               loglist.push_back( (double) data.resolution.curr_frame_width );
+               if( ! converged )
+               {
+                  converged = Monitor::frame_resolution::updateResolution( 
+                                                    data.resolution,
+                                                    total_time );
+               }
+               else
+               {  /** converged **/
+                  loglist.push_back( std::make_pair( total_time, 
+                                     data.resolution.curr_frame_width ) );
+               }
             }
 
             /** log **/
@@ -240,8 +246,7 @@ protected:
             }
             for( auto pair : loglist )
             {
-               /** not really a pair anymore, double **/
-               ofs << pair << "\n";
+               ofs << pair.first << "," << pair.second << "\n";
             }
             ofs.close();
          }

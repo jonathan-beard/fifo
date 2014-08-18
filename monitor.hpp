@@ -27,7 +27,7 @@
 #include "ringbuffertypes.hpp"
 
 #define NUMFRAMES    5
-#define CONVERGENCE .1
+#define CONVERGENCE  .10
 
 extern Clock *system_clock;
 
