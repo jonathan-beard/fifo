@@ -30,6 +30,10 @@ public:
 
    virtual sclock_t getTime() = 0;
 
+   /**
+    * getResolution - returns the minimum "resolution" which 
+    * might be better termed latency for this clock's update
+    */
    sclock_t getResolution();
 
 private:
