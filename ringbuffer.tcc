@@ -174,7 +174,9 @@ protected:
                                                       data.resolution,
                                                       Direction::Producer,
                                                       false );
-                  if( converged )
+                  if( converged 
+                     && Monitor::frame_resolution::acceptEntry( data.resolution,
+                                                     system_clock->getTime() - prev_time ) )
                   {
                      data.arrival.items         += write_copy.count;
                      data.arrival.frame_count   += 1;
@@ -202,7 +204,9 @@ protected:
                   Monitor::frame_resolution::setBlockedStatus( data.resolution,
                                                       Direction::Consumer,
                                                       false );
-                  if( converged )
+                  if( converged 
+                        && Monitor::frame_resolution::acceptEntry( data.resolution,
+                                                  system_clock->getTime() - prev_time ) )
                   {
                      data.departure.items       += read_copy.count;
                      data.departure.frame_count += 1;
@@ -229,11 +233,10 @@ protected:
                   converged = Monitor::frame_resolution::updateResolution( 
                                                     data.resolution,
                                                     total_time );
-               }
-               else
-               {  /** converged **/
-                  loglist.push_back( std::make_pair( total_time, 
-                                     data.resolution.curr_frame_width ) );
+                  if( converged )
+                  {
+                     std::cout << "Interval: " << data.resolution.curr_frame_width << "\n";
+                  }
                }
             }
 

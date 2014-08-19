@@ -27,7 +27,7 @@
 #include "ringbuffertypes.hpp"
 
 #define NUMFRAMES    5
-#define CONVERGENCE  .005
+#define CONVERGENCE  .05
 
 extern Clock *system_clock;
 
@@ -117,25 +117,45 @@ namespace Monitor
          {
             if( p_diff < ( -CONVERGENCE ) )
             {
-               frame.curr_frame_width *= 2;
+               frame.curr_frame_width += system_clock->getResolution();
                return( false );
             }
          }
          else if ( p_diff > CONVERGENCE )
          {
-            frame.curr_frame_width *= 2;
+            frame.curr_frame_width += system_clock->getResolution();;
             return( false );
          }
-         //else
+         //else calc range
+         const double upperPercent( 1.25 );
+         const double lowerPercent( .75   );
+         /** note: frame.curr_frame_width always > 0 **/
+         frame.range.upper = frame.curr_frame_width * upperPercent;
+         frame.range.lower = frame.curr_frame_width * lowerPercent;
          return( true );
       }
-                                    
+      
+      static bool acceptEntry( volatile frame_resolution &frame,
+                               sclock_t                   realized_frame_time )
+      {
+         const float diff( realized_frame_time - frame.curr_frame_width );
+         if( diff >= frame.range.lower && diff <= frame.range.upper )
+         {
+            return( true );
+         }
+         return( false );
+      }
 
       /** might be faster with a bit vector **/
       bool     frame_blocked[ NUMFRAMES ][ 2 ];
       int      curr_frame_index;
       double   curr_frame_width;
-   };
+      struct
+      {
+         double upper;
+         double lower;
+      }range;
+  };
 
    struct QueueData 
    {
