@@ -76,14 +76,21 @@ run( RingBufferBase< T, type > &buffer,
       if( frame_resolution::acceptEntry( resolution,
                                          ( end_time - prev_time ) ) )
       {
-         for( SampleType< T, type > *s : *(self.sample_list) )
-         {
-            s->accept( converged );
-         }
+       for( SampleType< T, type > *s : *(self.sample_list) )
+       {
+          s->accept( converged );
+       }
       }
       if( ! converged )
       {
          converged = frame_resolution::updateResolution( resolution, prev_time );
+         if( converged )
+         {
+            for( SampleType< T, type > *s : *(self.sample_list) )
+            {
+               s->setFrameWidth( resolution.getFrameWidth() );
+            }
+         }
       }
       prev_time = system_clock->getTime();
    }

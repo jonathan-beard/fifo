@@ -76,23 +76,29 @@ frame_resolution::wasBlocked(  frame_resolution &frame )
  */
 bool 
 frame_resolution::updateResolution(  frame_resolution &frame,
-                                     sclock_t          realized_frame_time )
+                                     sclock_t          prev_time )
 {
+   
+   const auto realized_frame_time( system_clock->getTime() - prev_time );
    const double p_diff( 
    ( realized_frame_time - frame.curr_frame_width ) /
       frame.curr_frame_width );
-   fprintf( stderr, "%f\n", p_diff );
+   fprintf( stderr, "%.20f,%.20f,%.20f\n", p_diff, 
+                                           frame.curr_frame_width,
+                                           realized_frame_time );
    if ( p_diff < 0 ) 
    {
       if( p_diff < ( -CONVERGENCE ) )
       {
-         frame.curr_frame_width += system_clock->getResolution();
+         //frame.curr_frame_width += system_clock->getResolution();
+         frame.curr_frame_width *= 2;
          return( false );
       }
    }
    else if ( p_diff > CONVERGENCE )
    {
-      frame.curr_frame_width += system_clock->getResolution();;
+      //frame.curr_frame_width += system_clock->getResolution();
+      frame.curr_frame_width *= 2;
       return( false );
    }
    //else calc range
@@ -131,4 +137,10 @@ frame_resolution::waitForInterval(  frame_resolution &frame )
 #endif               
    }
    return;
+}
+
+sclock_t
+frame_resolution::getFrameWidth()
+{
+   return( curr_frame_width );
 }

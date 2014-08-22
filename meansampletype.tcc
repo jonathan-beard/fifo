@@ -39,7 +39,6 @@ virtual ~MeanSampleType()
 virtual void
 sample( RingBufferBase< T, type > &buffer )
 {
-   (this)->temp.frames_count += 1;
    (this)->temp.occupancy    += buffer.size();
 }
 
@@ -52,7 +51,6 @@ accept( volatile bool &converged )
    }
    /** TODO, change this if I change the struct to a union **/
    (this)->temp.occupancy        = 0;
-   (this)->temp.frames_count     = 0;
 }
 
 protected:
@@ -65,7 +63,8 @@ printHeader()
 virtual std::string
 printData()
 {
-   return( std::to_string( (double) (this)->real.occupancy / (double) (this)->real.frames_count ) );
+   return( std::to_string( 
+      (double) (this)->real.occupancy / ( (double) (this)->real.frames_count ) ) );
 }
 
 private:
@@ -81,7 +80,7 @@ struct stats{
    operator += ( const stats &rhs )
    {
       (this)->occupancy    += rhs.occupancy;
-      (this)->frames_count += rhs.occupancy;
+      (this)->frames_count += 1;
       return( *this );
    }
    

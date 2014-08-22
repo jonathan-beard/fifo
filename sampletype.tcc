@@ -29,8 +29,17 @@
 template < class T, RingBufferType type > class SampleType
 {
 public:
+SampleType() : frame_width( 0 )
+{
+   
+}
+
 virtual void sample( RingBufferBase< T, type >     &buffer ) = 0;
 virtual void accept( volatile bool &converged ) = 0;
+virtual void setFrameWidth( const sclock_t frame_width )
+{
+   (this)->frame_width = frame_width;
+}
 
 std::ostream&
 print( std::ostream &stream )
@@ -43,6 +52,6 @@ protected:
 virtual std::string printHeader() = 0;
 virtual std::string printData()   = 0;
 
-
+sclock_t frame_width;
 };
 #endif /* END _SAMPLETYPE_TCC_ */

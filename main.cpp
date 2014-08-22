@@ -17,7 +17,7 @@
 
 #define MAX_VAL 10000000
 
-
+Clock *system_clock;
 
 struct Data
 {
@@ -42,7 +42,6 @@ typedef RingBuffer< std::int64_t          /* buffer type */,
 #endif
 
 
-Clock *system_clock = new SystemClock< System >( 1 );
 
 
 void
@@ -151,6 +150,7 @@ std::string test()
 int 
 main( int argc, char **argv )
 {
+   system_clock = new SystemClock< Cycle >( 1 );
    //RandomString< 50 > rs;
    //const std::string root( "/project/mercury/svardata/" );
    //const std::string root( "" );

@@ -27,7 +27,7 @@
 #endif
 
 #ifndef CONVERGENCE
-#define CONVERGENCE .05
+#define CONVERGENCE .0005
 #endif
 
 class frame_resolution
@@ -82,6 +82,9 @@ public:
  
    static void waitForInterval(  frame_resolution &frame );
    
+   sclock_t getFrameWidth();
+
+
 private:
    sclock_t   curr_frame_width;
    /** might be faster with a bit vector **/
