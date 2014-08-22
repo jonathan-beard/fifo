@@ -30,6 +30,8 @@
 #define CONVERGENCE .05
 #endif
 
+extern Clock *system_clock;
+
 class frame_resolution
 {
 public:

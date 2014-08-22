@@ -18,13 +18,11 @@
  * limitations under the License.
  */
 #include "resolution.hpp"
-#include "Clock.hpp"
 
 #include <cstdlib>
 #include <cstdio>
 #include <cstring>
 
-extern Clock *system_clock;
 
 frame_resolution::frame_resolution() :
                                        curr_frame_width( 0 ),
