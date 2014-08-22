@@ -9,9 +9,13 @@
 #include <fstream>
 #include <cassert>
 #include <cinttypes>
+
+#include "SystemClock.tcc"
+
+Clock *system_clock = new SystemClock< System >( 1 );
+
 #include "procwait.hpp"
 #include "ringbuffer.tcc"
-#include "SystemClock.tcc"
 #include "randomstring.tcc"
 #include "signalvars.hpp"
 
