@@ -39,15 +39,11 @@
 #include "ringbufferbase.tcc"
 #include "ringbuffertypes.hpp"
 #include "SystemClock.tcc"
+#include "sample.tcc"
+#include "meansampletype.tcc"
 
 extern Clock *system_clock;
 
-/**
- * This include has all the code for the monitor.
- * It was removed to make this file a bit more 
- * readable.
- */
-#include "monitor.hpp"
 
 template < class T, 
            RingBufferType type = RingBufferType::Heap, 
@@ -78,17 +74,19 @@ template< class T,
 public:
    RingBufferBaseMonitor( const size_t n ) : 
             RingBufferBase< T, type >(),
-            monitor_data( sizeof( T ) ),
             monitor( nullptr ),
             term( false )
    {
       (this)->data = new Buffer::Data<T, 
                                       RingBufferType::Heap >( n );
 
-      (this)->monitor = new std::thread( monitor_thread, 
-                                         std::ref( *(this) ),
-                                         std::ref( (this)->term ),
-                                         std::ref( (this)->monitor_data ) );
+      /** add monitor types immediately after construction **/
+      sample_master.registerSample( new MeanSampleType< T, type >() );
+
+      (this)->monitor = new std::thread( Sample< T, type >::run, 
+                                         std::ref( *(this)      /** buffer **/ ),
+                                         std::ref( (this)->term /** term bool **/ ),
+                                         std::ref( (this)->sample_master ) );
 
    }
 
@@ -106,189 +104,16 @@ public:
       delete( (this)->data );
    }
 
-   volatile Monitor::QueueData& 
-      getQueueData()
+   std::ostream&
+   printQueueData( std::ostream &stream )
    {
-      return( monitor_data );
+      stream << sample_master.printAllData( '\n' );
+      return( stream );
    }
-
 protected:
-   /**
-    * monitor_thread - implements queue monitoring for arrival rate and
-    * departure rate (service rate) from the queue.  Also enables mean 
-    * queue occupancy monitoring.  Other functions could easily be added
-    * as well, such as an all full counter, or a full histogram for each
-    * queue position.
-    * @param buffer - ring buffer of this type
-    * @param term   - bool to stop the monitor thread
-    * @param data   - state data to return to the process monitoring this queue
-    */
-   static void monitor_thread( RingBufferBaseMonitor< T, type >     &buffer,
-                               volatile bool          &term,
-                               volatile Monitor::QueueData     &data )
-   {
-      bool arrival_started( false );
-      switch( type )
-      {
-         case( RingBufferType::Heap ):
-         {
-            std::vector< std::pair< double, double > > loglist;
-            bool converged( false );
-            auto prev_time( system_clock->getTime() ); 
-            while( ! term )
-            {
-               const auto stop_time( 
-                  data.resolution.curr_frame_width + system_clock->getTime() );
-               while( system_clock->getTime() < stop_time  && ! term )
-               {
-#if __x86_64            
-                  __asm__ volatile("\
-                     pause"
-                     :
-                     :
-                     : );
-#endif               
-               }
-               const Blocked read_copy ( buffer.read_stats );
-               const Blocked write_copy( buffer.write_stats );
-               buffer.read_stats.all   = 0;
-               buffer.write_stats.all  = 0;
-               if( ! arrival_started )
-               {
-                  if( write_copy.count != 0 )
-                  {
-                     arrival_started = true;
-                     std::this_thread::yield();
-                     continue;
-                  }
-               }
-               /**
-                * if we're not blocked, and the server has actually started
-                * and the end of data signal has not been received then 
-                * record the throughput within this frame
-                */
-               if( write_copy.blocked == 0 && 
-                     arrival_started  && ! buffer.write_finished ) 
-               {
-                  Monitor::frame_resolution::setBlockedStatus( 
-                                                      data.resolution,
-                                                      Direction::Producer,
-                                                      false );
-                  if( converged 
-                     && Monitor::frame_resolution::acceptEntry( data.resolution,
-                                                     system_clock->getTime() - prev_time ) )
-                  {
-                     data.arrival.items         += write_copy.count;
-                     data.arrival.frame_count   += 1;
-                  }
-                  else
-                  {
-                     data.arrival.items         += 0;
-                     data.arrival.frame_count   += 0;
-                  }
-               }
-               else
-               {
-                  Monitor::frame_resolution::setBlockedStatus( data.resolution,
-                                                      Direction::Producer,
-                                                      true );
-               }
-               
-               /**
-                * if we're not blocked, and the server has actually started
-                * and the end of data signal has not been received then 
-                * record the throughput within this frame
-                */
-               if( read_copy.blocked == 0 )
-               {
-                  Monitor::frame_resolution::setBlockedStatus( data.resolution,
-                                                      Direction::Consumer,
-                                                      false );
-                  if( converged 
-                        && Monitor::frame_resolution::acceptEntry( data.resolution,
-                                                  system_clock->getTime() - prev_time ) )
-                  {
-                     data.departure.items       += read_copy.count;
-                     data.departure.frame_count += 1;
-                  }
-                  else
-                  {
-                     data.departure.items       += 0;
-                     data.departure.frame_count += 0;
-                  }
-               }
-               else
-               {
-                  Monitor::frame_resolution::setBlockedStatus( 
-                                                      data.resolution,
-                                                      Direction::Consumer,
-                                                      true );
-               }
-               data.mean_occupancy.items        += buffer.size();
-               data.mean_occupancy.frame_count  += 1;
-               const auto total_time( system_clock->getTime() - prev_time );
-               prev_time = system_clock->getTime();
-               if( ! converged )
-               {
-                  converged = Monitor::frame_resolution::updateResolution( 
-                                                    data.resolution,
-                                                    total_time );
-                  if( converged )
-                  {
-                     std::cout << "Interval: " << data.resolution.curr_frame_width << "\n";
-                  }
-               }
-            }
-
-            /** log **/
-            std::ofstream ofs( "/tmp/log.csv" );
-            if( ! ofs.is_open() )
-            {
-               std::cerr << "Failed to open output log\n";
-               exit( EXIT_FAILURE );
-            }
-            for( auto pair : loglist )
-            {
-               ofs << pair.first << "," << pair.second << "\n";
-            }
-            ofs.close();
-         }
-         break;
-         case( RingBufferType::Infinite ):
-         {
-            /**
-             * set departed_samples and arrived_samples to 1 so
-             * the multiplication above works out for the infinite
-             * queue.
-             */
-            data.departure.frame_count = 1;
-            data.arrival.frame_count   = 1;
-            const auto start_time( system_clock->getTime() );
-            while( ! term )
-            {
-#if __x86_64            
-                  __asm__ volatile("\
-                     pause"
-                     :
-                     :
-                     : );
-#endif              
-            }
-            const auto end_time(   system_clock->getTime() );
-            data.arrival.items   = buffer.write_stats.count;
-            data.departure.items = buffer.read_stats.count;
-            /** set sample frequency to time diff **/
-            data.resolution.curr_frame_width = ( end_time - start_time );
-         }
-         break;
-         default:
-            assert( false );
-      }
-   }
-   
-   volatile Monitor::QueueData monitor_data;
    std::thread       *monitor;
    volatile bool      term;
+   Sample< T, type >  sample_master;
 };
 
 template< class T > class RingBuffer< T, 

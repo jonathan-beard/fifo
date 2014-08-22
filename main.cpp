@@ -141,9 +141,8 @@ std::string test()
 #if USESharedMemory   
    return( "done" );
 #else
-   auto &monitor_data( buffer.getQueueData() );
    std::stringstream ss;
-   Monitor::QueueData::print( monitor_data, Monitor::QueueData::Bytes, ss, false);
+   buffer.printQueueData( ss );
    return( ss.str() );
 #endif
 }
