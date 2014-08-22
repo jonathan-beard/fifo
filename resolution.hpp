@@ -34,7 +34,7 @@ class frame_resolution
 {
 public:
    frame_resolution();
-   ~frame_resolution() = default;
+   virtual ~frame_resolution() = default;
 
    /**
     * setBlockedStatus - sets the blocked status, which will be

@@ -18,9 +18,17 @@
  * limitations under the License.
  */
 #include "resolution.hpp"
+#include "Clock.hpp"
 
-frame_resolution::frame_resolution() : curr_frame_index( 0 ),
-                                       curr_frame_width( 0 )
+#include <cstdlib>
+#include <cstdio>
+#include <cstring>
+
+extern Clock *system_clock;
+
+frame_resolution::frame_resolution() :
+                                       curr_frame_width( 0 ),
+                                       curr_frame_index( 0 )
 {
    std::memset( frame_blocked, 
                 0x0, 
@@ -31,7 +39,7 @@ frame_resolution::frame_resolution() : curr_frame_index( 0 ),
 void 
 frame_resolution::setBlockedStatus(  frame_resolution &frame,
                                      Direction         dir,
-                                     const bool blocked = false )
+                                     const bool blocked )
 {
     frame.frame_blocked[ frame.curr_frame_index ][ (int) dir ]
       = blocked;
@@ -96,8 +104,9 @@ frame_resolution::updateResolution(  frame_resolution &frame,
    return( true );
 }
 
-static bool acceptEntry(  frame_resolution &frame,
-                         sclock_t                   realized_frame_time )
+bool 
+frame_resolution::acceptEntry(  frame_resolution   &frame,
+                                sclock_t            realized_frame_time )
 {
    const float diff( realized_frame_time - frame.curr_frame_width );
    if( diff >= frame.range.lower && diff <= frame.range.upper )
@@ -107,7 +116,8 @@ static bool acceptEntry(  frame_resolution &frame,
    return( false );
 }
 
-static void waitForInterval(  frame_resolution &frame )
+void 
+frame_resolution::waitForInterval(  frame_resolution &frame )
 {
    const sclock_t stop_time( system_clock->getTime() + frame.curr_frame_width );
    while( system_clock->getTime() < stop_time ) 
