@@ -91,7 +91,9 @@ private:
       }
       while( ! thread_data.setup )
       {
+#ifdef __x86_64         
          __asm__ volatile ("pause" : : :);
+#endif      
       }
    }
 

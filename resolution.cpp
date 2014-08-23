@@ -22,7 +22,7 @@
 #include <cstdlib>
 #include <cstdio>
 #include <cstring>
-
+#include <cassert>
 
 frame_resolution::frame_resolution() :
                                        curr_frame_width( 0 ),
@@ -31,7 +31,8 @@ frame_resolution::frame_resolution() :
    std::memset( frame_blocked, 
                 0x0, 
                 sizeof( bool ) * NUMFRAMES );
-   curr_frame_width =  system_clock->getResolution(); 
+   assert( system_clock != nullptr );
+   curr_frame_width = system_clock->getResolution(); 
 }
 
 void 
@@ -81,22 +82,21 @@ frame_resolution::updateResolution(  frame_resolution &frame,
    const double p_diff( 
    ( realized_frame_time - frame.curr_frame_width ) /
       frame.curr_frame_width );
-   fprintf( stderr, "%.20f,%.20f,%.20f\n", p_diff, 
+   /*fprintf( stderr, "%.20f,%.20f,%.20f\n", p_diff, 
                                            frame.curr_frame_width,
                                            realized_frame_time );
+   */
    if ( p_diff < 0 ) 
    {
       if( p_diff < ( -CONVERGENCE ) )
       {
-         //frame.curr_frame_width += system_clock->getResolution();
-         frame.curr_frame_width *= 2;
+         frame.curr_frame_width += system_clock->getResolution();
          return( false );
       }
    }
    else if ( p_diff > CONVERGENCE )
    {
-      //frame.curr_frame_width += system_clock->getResolution();
-      frame.curr_frame_width *= 2;
+      frame.curr_frame_width += system_clock->getResolution();
       return( false );
    }
    //else calc range

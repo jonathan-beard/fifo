@@ -9,11 +9,8 @@
 #include <fstream>
 #include <cassert>
 #include <cinttypes>
-
+#include "Clock.hpp"
 #include "SystemClock.tcc"
-
-Clock *system_clock = new SystemClock< System >( 1 );
-
 #include "procwait.hpp"
 #include "ringbuffer.tcc"
 #include "randomstring.tcc"
@@ -154,7 +151,7 @@ std::string test()
 int 
 main( int argc, char **argv )
 {
-   system_clock = new SystemClock< Cycle >( 1 );
+   system_clock = new SystemClock< System >( 1 );
    //RandomString< 50 > rs;
    //const std::string root( "/project/mercury/svardata/" );
    //const std::string root( "" );
@@ -164,7 +161,7 @@ main( int argc, char **argv )
    //   std::cerr << "Couldn't open ofstream!!\n";
    //   exit( EXIT_FAILURE );
    //}
-   int runs( 1 );
+   int runs( 10 );
    while( runs-- )
    {
        std::cout << test() << "\n";

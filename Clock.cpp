@@ -44,7 +44,8 @@ Clock::getResolution()
    {
       return( *resolution );
    }
-   const size_t count( 1e6 );
+   /** TODO, figure out why some sizes throw a KERN_PROT_FAULT on OS X**/
+   const size_t count( 1e4 );
    std::array< sclock_t , count > update_array; 
    for( size_t index( 0 ); index < count; index++ )
    {

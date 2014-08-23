@@ -1,0 +1,36 @@
+The program being debugged has been started already.
+Start it from the beginning? (y or n) Starting program: /Users/jonathanbeard/GIT_RPO/fifo_dev/ringb 
+Hardware watchpoint 1: system_clock
+
+Old value = (Clock *) 0x0
+New value = (Clock *) 0x100503c40
+main (argc=1, argv=0x7fff5fbff708) at main.cpp:164
+164	   int runs( 1 );
+The program being debugged has been started already.
+Start it from the beginning? (y or n) `/Users/jonathanbeard/GIT_RPO/fifo_dev/ringb' has changed; re-reading symbols.
+Starting program: /Users/jonathanbeard/GIT_RPO/fifo_dev/ringb 
+Hardware watchpoint 1: system_clock
+
+Old value = (Clock *) 0x0
+New value = (Clock *) 0x100503c40
+main (argc=1, argv=0x7fff5fbff708) at main.cpp:164
+164	   int runs( 1 );
+Continuing.
+
+Program received signal EXC_BAD_ACCESS, Could not access memory.
+Reason: KERN_PROTECTION_FAILURE at address: 0x0000000101800000
+[Switching to process 28765 thread 0x1103]
+Clock::getResolution (this=0x100503c40) at Clock.cpp:51
+51	      update_array[ index ] = getTime();
+The program being debugged has been started already.
+Start it from the beginning? (y or n) `/Users/jonathanbeard/GIT_RPO/fifo_dev/ringb' has changed; re-reading symbols.
+Starting program: /Users/jonathanbeard/GIT_RPO/fifo_dev/ringb 
+Hardware watchpoint 1: system_clock
+
+Old value = (Clock *) 0x0
+New value = (Clock *) 0x100503c40
+main (argc=1, argv=0x7fff5fbff708) at main.cpp:164
+164	   int runs( 1 );
+Continuing.
+
+Program exited normally.

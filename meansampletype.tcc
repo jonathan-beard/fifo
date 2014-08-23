@@ -48,6 +48,7 @@ accept( volatile bool &converged )
    if( converged )
    {
       (this)->real += (this)->temp;
+      //std::cerr << (this)->temp.occupancy << "\n";
    }
    /** TODO, change this if I change the struct to a union **/
    (this)->temp.occupancy        = 0;
@@ -63,6 +64,9 @@ printHeader()
 virtual std::string
 printData()
 {
+   //std::stringstream ss;
+   //ss << (this)->real.occupancy << ", " << (this)->real.frames_count;
+   //return( ss.str() );
    return( std::to_string( 
       (double) (this)->real.occupancy / ( (double) (this)->real.frames_count ) ) );
 }
