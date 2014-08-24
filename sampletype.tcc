@@ -33,6 +33,7 @@ SampleType() : frame_width( 0 )
 {
    
 }
+virtual ~SampleType() = default;
 
 virtual void sample( RingBufferBase< T, type >     &buffer ) = 0;
 virtual void accept( volatile bool &converged ) = 0;

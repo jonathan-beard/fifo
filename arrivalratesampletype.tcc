@@ -20,6 +20,48 @@
 #ifndef _ARRIVALRATESAMPLETYPE_TCC_
 #define _ARRIVALRATESAMPLETYPE_TCC_  1
 
+#include <string>
+
+#include "ringbuffertypes.hpp"
+#include "sampletype.tcc"
+
+template < class T, RingbufferType type > class ArrivalRateSampleType : 
+   public SampleType< T, type >
+{
+public:
+ArrivalRateSampleType() : SampleType< T, type >()
+{
+}
+
+virtual ~ArrivalRateSampleType()
+{
+}
+
+virtual void
+sample( RingBufferBase< T, type > &buffer )
+{
+   /** get copy of read object **/
+
+}
+
+
+virtual void
+accept( volatile bool &converged )
+{
+
+}
+
+protected:
+virtual std::string 
+printHeader()
+{
+   return( "arrival_rate" );
+}
+
+private:
+};
+
+#if 0 
                const Blocked read_copy ( buffer.read_stats );
                const Blocked write_copy( buffer.write_stats );
                buffer.read_stats.all   = 0;
@@ -64,4 +106,6 @@
                                                       Direction::Producer,
                                                       true );
                }
+#endif 
+
 #endif /* END _ARRIVALRATESAMPLETYPE_TCC_ */
