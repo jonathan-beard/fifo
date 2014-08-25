@@ -72,7 +72,7 @@ run( RingBufferBase< T, type > &buffer,
       {
          s->sample( buffer );
       }
-      const auto end_time( system_clock->getTime() );
+      //const auto end_time( system_clock->getTime() );
 //      if( frame_resolution::acceptEntry( resolution,
 //                                         ( end_time - prev_time ) ) )
 //      {

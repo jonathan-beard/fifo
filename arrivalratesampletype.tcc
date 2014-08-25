@@ -23,13 +23,17 @@
 #include <string>
 
 #include "ringbuffertypes.hpp"
-#include "sampletype.tcc"
+#include "ratesampletype.tcc"
+#include "blocked.hpp"
 
-template < class T, RingbufferType type > class ArrivalRateSampleType : 
-   public SampleType< T, type >
+template < class T, RingBufferType type > class ArrivalRateSampleType : 
+   public RateSampleType< T, type >
 {
 public:
-ArrivalRateSampleType() : SampleType< T, type >()
+ArrivalRateSampleType() : RateSampleType< T, type >(),
+                          arrival_started( false ),
+                          blocked( false ),
+                          finished( false )
 {
 }
 
@@ -40,15 +44,44 @@ virtual ~ArrivalRateSampleType()
 virtual void
 sample( RingBufferBase< T, type > &buffer )
 {
-   /** get copy of read object **/
+   /** nomenclature is a but funky but arrival = writes to queue **/ 
+   Blocked arrival_copy;
+   buffer.get_zero_write_stats( arrival_copy );
+   if( ! arrival_started )
+   {
+      if( arrival_copy.count != 0 )
+      {
+         (this)->arrival_started = true;
+         std::this_thread::yield();
+      }
+   }
 
+   (this)->temp.items_copied = arrival_copy.count;
+   if( arrival_copy.blocked != 0 )
+   {
+      (this)->blocked = true;
+   }  
+   buffer.get_write_finished( finished );
 }
 
 
+/**
+ * accept - take the current frame and add it to the overall
+ * total, would be nice to have a single virtual function 
+ * in the ratesampletype template, however I have a feeling
+ * the logic will diverge significantly enough that this will
+ * be less confusing.
+ * @param   converged - true if the times have converged.
+ */
 virtual void
 accept( volatile bool &converged )
 {
-
+   if( converged && ! (this)->blocked && (this)->arrival_started && ! (this)->finished )
+   {
+      (this)->real += (this)->temp;
+   }
+   (this)->temp.items_copied = 0;
+   (this)->blocked = false;
 }
 
 protected:
@@ -59,53 +92,8 @@ printHeader()
 }
 
 private:
+   bool    arrival_started;
+   bool    blocked;
+   bool    finished;
 };
-
-#if 0 
-               const Blocked read_copy ( buffer.read_stats );
-               const Blocked write_copy( buffer.write_stats );
-               buffer.read_stats.all   = 0;
-               buffer.write_stats.all  = 0;
-               if( ! arrival_started )
-               {
-                  if( write_copy.count != 0 )
-                  {
-                     arrival_started = true;
-                     std::this_thread::yield();
-                     continue;
-                  }
-               }
-               /**
-                * if we're not blocked, and the server has actually started
-                * and the end of data signal has not been received then 
-                * record the throughput within this frame
-                */
-               if( write_copy.blocked == 0 && 
-                     arrival_started  && ! buffer.write_finished ) 
-               {
-                  Monitor::frame_resolution::setBlockedStatus( 
-                                                      data.resolution,
-                                                      Direction::Producer,
-                                                      false );
-                  if( converged 
-                     && Monitor::frame_resolution::acceptEntry( data.resolution,
-                                                     system_clock->getTime() - prev_time ) )
-                  {
-                     data.arrival.items         += write_copy.count;
-                     data.arrival.frame_count   += 1;
-                  }
-                  else
-                  {
-                     data.arrival.items         += 0;
-                     data.arrival.frame_count   += 0;
-                  }
-               }
-               else
-               {
-                  Monitor::frame_resolution::setBlockedStatus( data.resolution,
-                                                      Direction::Producer,
-                                                      true );
-               }
-#endif 
-
 #endif /* END _ARRIVALRATESAMPLETYPE_TCC_ */

@@ -39,7 +39,7 @@
  * writes or blocking for space, otherwise blocking will
  * actively spin while waiting.
  */
-//#define NICE 1
+#define NICE 1
 
 extern Clock *system_clock;
 
@@ -218,6 +218,10 @@ public:
       write_stats.count++;
       if( signal == RBSignal::RBEOF )
       {
+         /**
+          * TODO, this is a quick hack, rework when proper signalling
+          * is implemented.
+          */
          (this)->write_finished = true;
       }
       (this)->allocate_called = false;
@@ -437,6 +441,43 @@ public:
       assert( range <= data->max_cap );
       Pointer::incBy( range, data->read_pt );
       read_stats.count += range;
+   }
+   
+   /**
+    * get_zero_read_stats - sets the param variable
+    * to the current blocked stats and then sets the
+    * current vars to zero.
+    * @param   copy - Blocked&
+    */
+   void get_zero_read_stats( Blocked &copy )
+   {
+      copy.all       = read_stats.all;
+      read_stats.all = 0;
+   }
+
+   /**
+    * get_zero_write_stats - sets the write variable
+    * to the current blocked stats and then sets the 
+    * current vars to zero.
+    * @param   copy - Blocked&
+    */
+   void get_zero_write_stats( Blocked &copy )
+   {
+      copy.all       = write_stats.all;
+      write_stats.all = 0;
+   }
+
+   /**
+    * get_write_finished - does exactly what it says, 
+    * sets the param variable to true when all writes
+    * have been finished.  This particular funciton 
+    * might change in the future but for the moment
+    * its vital for instrumentation.
+    * @param   write_finished - bool&
+    */
+   void get_write_finished( bool &write_finished )
+   {
+      write_finished = (this)->write_finished;
    }
 
 protected:
@@ -682,12 +723,25 @@ public:
       read_stats.count += range;
    }
 
+   void get_zero_read_stats( Blocked &copy )
+   {
+      copy.all       = read_stats.all;
+      read_stats.all = 0;
+   }
+
+   void get_zero_write_stats( Blocked &copy )
+   {
+      copy.all       = write_stats.all;
+      write_stats.all = 0;
+   }
+
 protected:
    /** go ahead and allocate a buffer as a heap, doesn't really matter **/
    Buffer::Data< T, RingBufferType::Heap >      *data;
    /** note, these need to get moved into the data struct **/
    volatile Blocked                             read_stats;
    volatile Blocked                             write_stats;
+   
    volatile bool                                allocate_called;
    volatile bool                                write_finished;
 };

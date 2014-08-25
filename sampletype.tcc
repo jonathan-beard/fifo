@@ -26,18 +26,17 @@
 #include "ringbuffertypes.hpp"
 #include "ringbufferbase.tcc"
 
+#include "units.hpp"
+
 template < class T, RingBufferType type > class SampleType
 {
 public:
-
-enum Unit : std::size_t { Byte = 0, KB, MB, GB, TB, N };
-const static std::array< double, Units::N > unit_conversion;
-const static std::array< std::string, N > unit_prints;
 
 SampleType() : frame_width( 0 )
 {
    
 }
+
 virtual ~SampleType() = default;
 
 virtual void sample( RingBufferBase< T, type >     &buffer ) = 0;
@@ -62,18 +61,4 @@ sclock_t frame_width;
 
 };
 
-/** constants for use later **/
-const static std::array< double, 
-                  Monitor::QueueData::Units::N > 
-                  Monitor::QueueData::unit_conversion
-                      = {{ 1              /** bytes **/,
-                           0.000976562    /** kilobytes **/,
-                           9.53674e-7     /** megabytes **/, 
-                           9.31323e-10    /** gigabytes **/,
-                           9.09495e-13    /** terabytes **/ }};
-
-const static std::array< std::string, 
-                  Monitor::QueueData::Units::N > 
-                     Monitor::QueueData::unit_prints
-                         = {{ "Bytes", "KB", "MB", "GB", "TB" }};
 #endif /* END _SAMPLETYPE_TCC_ */

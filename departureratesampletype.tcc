@@ -19,35 +19,59 @@
  */
 #ifndef _DEPARTURERATESAMPLETYPE_TCC_
 #define _DEPARTURERATESAMPLETYPE_TCC_  1
+#include <string>
+#include "ringbuffertypes.hpp"
+#include "ratesampletype.tcc"
+#include "blocked.hpp"
+#include <cinttypes>
+template < class T, RingBufferType type > class DepartureRateSampleType :
+   public RateSampleType< T, type >
+{
+public:
+DepartureRateSampleType() : RateSampleType< T, type >(),
+                            blocked( false ),
+                            finished( false )
+{
+}
 
-               /**
-                * if we're not blocked, and the server has actually started
-                * and the end of data signal has not been received then 
-                * record the throughput within this frame
-                */
-               if( read_copy.blocked == 0 )
-               {
-                  Monitor::frame_resolution::setBlockedStatus( data.resolution,
-                                                      Direction::Consumer,
-                                                      false );
-                  if( converged 
-                        && Monitor::frame_resolution::acceptEntry( data.resolution,
-                                                  system_clock->getTime() - prev_time ) )
-                  {
-                     data.departure.items       += read_copy.count;
-                     data.departure.frame_count += 1;
-                  }
-                  else
-                  {
-                     data.departure.items       += 0;
-                     data.departure.frame_count += 0;
-                  }
-               }
-               else
-               {
-                  Monitor::frame_resolution::setBlockedStatus( 
-                                                      data.resolution,
-                                                      Direction::Consumer,
-                                                      true );
-               }
+virtual ~DepartureRateSampleType()
+{
+}
+
+virtual void
+sample( RingBufferBase< T, type > &buffer )
+{
+   Blocked departure_copy;
+   buffer.get_zero_read_stats( departure_copy );
+   (this)->temp.items_copied = departure_copy.count;
+   //fprintf( stderr, "%" PRIu32 "\n", departure_copy.count );
+   if( departure_copy.blocked != 0 )
+   {
+      (this)->blocked = true;
+   }
+   buffer.get_write_finished( (this)->finished );
+}
+
+virtual void
+accept( volatile bool &converged )
+{
+   if( converged && ! (this)->blocked && ! (this)->finished )
+   {
+      (this)->real += (this)->temp;
+   }
+   (this)->temp.items_copied  = 0;
+   (this)->blocked            = false;
+}
+
+protected:
+virtual std::string
+printHeader()
+{
+   return( "departure_rate" );
+}
+
+private:
+bool  blocked;
+bool  finished;
+};
 #endif /* END _DEPARTURERATESAMPLETYPE_TCC_ */

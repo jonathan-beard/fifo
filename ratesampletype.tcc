@@ -41,12 +41,20 @@ virtual ~RateSampleType()
 }
 
 protected:
-
+/**
+ * print_data - basic virtual function that can be used for service
+ * and arrival rate functions.  
+ */
 virtual std::string
-print_data( Unit unit = Unit::Byte )
+printData( Unit unit = Unit::Byte )
 {
+   std::cout << (this)->frame_width << "\n";
+   return( 
    std::to_string(  
-      (double) items_copied * 
+      ( (double) (this)->real.items_copied * (double) sizeof( T ) *  
+         unit_conversion[ unit ] ) / 
+            ( (double) (this)->real.frame_count * (double) (this)->frame_width )
+   )
    );
 }
 
@@ -67,7 +75,12 @@ struct stats
    stats&
    operator += (const stats &rhs )
    {
+#if __MMX__ == 1
       (this)->all += rhs.all;
+#else
+      (this)->items_copied += rhs.items_copied;
+      (this)->frame_count  += 1;
+#endif
       return( *this );
    }
 
@@ -84,6 +97,6 @@ struct stats
       _v2di all;
    };
 #endif
-} real, temp;
+} real, temp = { 1 };
 };
 #endif /* END _RATESAMPLETYPE_TCC_ */

@@ -62,7 +62,7 @@ printHeader()
 }
 
 virtual std::string
-printData()
+printData( Unit unit = Unit::Byte )
 {
    //std::stringstream ss;
    //ss << (this)->real.occupancy << ", " << (this)->real.frames_count;

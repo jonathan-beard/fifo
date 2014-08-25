@@ -41,6 +41,8 @@
 #include "SystemClock.tcc"
 #include "sample.tcc"
 #include "meansampletype.tcc"
+#include "arrivalratesampletype.tcc"
+#include "departureratesampletype.tcc"
 
 extern Clock *system_clock;
 
@@ -82,7 +84,8 @@ public:
 
       /** add monitor types immediately after construction **/
       sample_master.registerSample( new MeanSampleType< T, type >() );
-
+      sample_master.registerSample( new ArrivalRateSampleType< T, type >() );
+      sample_master.registerSample( new DepartureRateSampleType< T, type > () );
       (this)->monitor = new std::thread( Sample< T, type >::run, 
                                          std::ref( *(this)      /** buffer **/ ),
                                          std::ref( (this)->term /** term bool **/ ),
