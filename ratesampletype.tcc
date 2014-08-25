@@ -23,6 +23,10 @@
 #include "ringbufferbase.tcc"
 #include "ringbuffertypes.hpp"
 
+#if __MMX__ == 1
+typedef std::int64_t _v2di __attribute__((vector_size (16)));
+#endif 
+
 template < class T, RingBufferType type > class RateSampleType : 
    public SampleType< T, type >
 {
@@ -37,23 +41,49 @@ virtual ~RateSampleType()
 }
 
 protected:
+
+virtual std::string
+print_data( Unit unit = Unit::Byte )
+{
+   std::to_string(  
+      (double) items_copied * 
+   );
+}
+
+/** stats struct for rates type samples **/
 struct stats
 {
    stats() : items_copied( 0 ),
              frame_count( 0 )
    {
    }
+   
+   stats( const std::int64_t frame_init ) : 
+             items_copied( 0 ),
+             frame_count( frame_init )
+   {
+   }
 
    stats&
    operator += (const stats &rhs )
    {
-      (this)->items_copied += rhs.item_copied;
-      (this)->frame_count  += 1;
+      (this)->all += rhs.all;
       return( *this );
    }
 
-   std::int64_t items_copied;
-   std::int64_t frame_count;
+#if __MMX__ == 1
+   union
+   {
+#endif   
+      struct
+      {
+         std::int64_t items_copied;
+         std::int64_t frame_count;
+      };
+#if __MMX__ == 1
+      _v2di all;
+   };
+#endif
 } real, temp;
 };
 #endif /* END _RATESAMPLETYPE_TCC_ */
