@@ -49,7 +49,7 @@ void
 producer( Data &data, TheBuffer &buffer )
 {
    std::int64_t current_count( 0 );
-   const float serviceTime( 100e-6 );
+   const float serviceTime( 10e-6 );
    while( current_count++ < data.send_count )
    {
       auto &ref( buffer.allocate() );
@@ -69,7 +69,7 @@ void
 consumer( TheBuffer &buffer )
 {
    std::int64_t   current_count( 0 );
-   const float serviceTime( 50e-6 );
+   const float serviceTime( 5e-6 );
    RBSignal signal( RBSignal::NONE );
    while( signal != RBSignal::RBEOF )
    {

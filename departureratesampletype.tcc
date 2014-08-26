@@ -50,8 +50,6 @@ sample( RingBufferBase< T, type > &buffer )
    buffer.get_zero_read_stats( departure_copy );
    (this)->temp.items_copied = departure_copy.count;
    const sclock_t curr_time( system_clock->getTime() );
-   fprintf( stderr, "%" PRIu32 ", %.20f \n", departure_copy.count, 
-                                             ( curr_time - (this)->prev_time ) );
    if( departure_copy.blocked != 0 || departure_copy.count == 0 )
    {
       (this)->blocked = true;
