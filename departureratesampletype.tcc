@@ -24,13 +24,18 @@
 #include "ratesampletype.tcc"
 #include "blocked.hpp"
 #include <cinttypes>
+#include "Clock.hpp"
+
+extern Clock *system_clock;
+
 template < class T, RingBufferType type > class DepartureRateSampleType :
    public RateSampleType< T, type >
 {
 public:
 DepartureRateSampleType() : RateSampleType< T, type >(),
                             blocked( false ),
-                            finished( false )
+                            finished( false ),
+                            prev_time( (sclock_t) 0 )
 {
 }
 
@@ -44,12 +49,15 @@ sample( RingBufferBase< T, type > &buffer )
    Blocked departure_copy;
    buffer.get_zero_read_stats( departure_copy );
    (this)->temp.items_copied = departure_copy.count;
-   //fprintf( stderr, "%" PRIu32 "\n", departure_copy.count );
-   if( departure_copy.blocked != 0 )
+   const sclock_t curr_time( system_clock->getTime() );
+   fprintf( stderr, "%" PRIu32 ", %.20f \n", departure_copy.count, 
+                                             ( curr_time - (this)->prev_time ) );
+   if( departure_copy.blocked != 0 || departure_copy.count == 0 )
    {
       (this)->blocked = true;
    }
    buffer.get_write_finished( (this)->finished );
+   (this)->prev_time = system_clock->getTime();
 }
 
 virtual void
@@ -73,5 +81,6 @@ printHeader()
 private:
 bool  blocked;
 bool  finished;
+sclock_t prev_time;
 };
 #endif /* END _DEPARTURERATESAMPLETYPE_TCC_ */
