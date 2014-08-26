@@ -48,7 +48,6 @@ protected:
 virtual std::string
 printData( Unit unit = Unit::Byte )
 {
-   std::cout << (this)->frame_width << "\n";
    return( 
    std::to_string(  
       ( (double) (this)->real.items_copied * (double) sizeof( T ) *  

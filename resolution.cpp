@@ -23,10 +23,13 @@
 #include <cstdio>
 #include <cstring>
 #include <cassert>
+#include <functional>
 
 frame_resolution::frame_resolution() :
                                        curr_frame_width( 0 ),
-                                       curr_frame_index( 0 )
+                                       curr_frame_index( 0 ),
+                                       frame_success( 0 ),
+                                       frame_failure( 0 )
 {
    std::memset( frame_blocked, 
                 0x0, 
@@ -82,38 +85,46 @@ frame_resolution::updateResolution(  frame_resolution &frame,
    const double p_diff( 
    ( realized_frame_time - frame.curr_frame_width ) /
       frame.curr_frame_width );
-   /*fprintf( stderr, "%.20f,%.20f,%.20f\n", p_diff, 
-                                           frame.curr_frame_width,
-                                           realized_frame_time );
-   */
-   if ( p_diff < 0 ) 
+   //fprintf( stderr, "%.20f,%.20f,%.20f\n", p_diff, 
+   //                                        frame.curr_frame_width,
+   //                                        realized_frame_time );
+   auto update = [&]()
    {
-      if( p_diff < ( -CONVERGENCE ) )
+      if( frame.frame_failure++ > 2 )
       {
          frame.curr_frame_width += system_clock->getResolution();
-         return( false );
+         frame.frame_failure = 0;
+         frame.frame_success = 0;
       }
+      return( false );
+   };
+   if( p_diff < ( -CONVERGENCE ) )
+   {
+      update();
    }
    else if ( p_diff > CONVERGENCE )
    {
-      frame.curr_frame_width += system_clock->getResolution();
-      return( false );
+      update(); 
    }
    //else calc range
-   const double upperPercent( 1.25 );
-   const double lowerPercent( .75   );
+   const double upperPercent( 1.001 );
+   const double lowerPercent( .999   );
    /** note: frame.curr_frame_width always > 0 **/
    frame.range.upper = frame.curr_frame_width * upperPercent;
    frame.range.lower = frame.curr_frame_width * lowerPercent;
-   return( true );
+   if( frame.frame_success++ > 5 )
+   {
+      return( true );
+   }
+   return( false );
 }
 
 bool 
 frame_resolution::acceptEntry(  frame_resolution   &frame,
                                 sclock_t            realized_frame_time )
 {
-   const float diff( realized_frame_time - frame.curr_frame_width );
-   if( diff >= frame.range.lower && diff <= frame.range.upper )
+   if( realized_frame_time >= frame.range.lower && 
+         realized_frame_time <= frame.range.upper )
    {
       return( true );
    }

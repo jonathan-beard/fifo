@@ -19,6 +19,8 @@
  */
 #ifndef _RESOLUTION_HPP_
 #define _RESOLUTION_HPP_  1
+#include <cstdint>
+
 #include "ringbuffertypes.hpp"
 #include "Clock.hpp"
 
@@ -88,14 +90,16 @@ public:
 
 
 private:
-   sclock_t   curr_frame_width;
+   sclock_t          curr_frame_width;
    /** might be faster with a bit vector **/
-   bool     frame_blocked[ NUMFRAMES ][ 2 ];
-   int      curr_frame_index;
+   bool              frame_blocked[ NUMFRAMES ][ 2 ];
+   std::int32_t      curr_frame_index;
    struct
    {
       double upper;
       double lower;
    }range;
+   std::uint16_t     frame_success;
+   std::uint16_t     frame_failure;
 };
 #endif /* END _RESOLUTION_HPP_ */
