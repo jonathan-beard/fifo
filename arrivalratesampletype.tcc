@@ -39,11 +39,10 @@ ArrivalRateSampleType() : RateSampleType< T, type >(),
                           arrival_started( false ),
                           blocked( false ),
                           finished( false ),
-                          prev_time( (sclock_t) 0 ),
-                          fp( nullptr )
+                          prev_time( (sclock_t) 0 )
 {
-   fp = fopen("/dev/null", "w");
-   assert( fp != nullptr );
+   //fp = fopen("/dev/null", "w");
+   //assert( fp != nullptr );
 }
 
 virtual ~ArrivalRateSampleType()
@@ -85,12 +84,12 @@ sample( RingBufferBase< T, type > &buffer )
 virtual void
 accept( volatile bool &converged )
 {
-   const sclock_t curr_time( system_clock->getTime() );
+   //const sclock_t curr_time( system_clock->getTime() );
    if( converged && ! (this)->blocked && (this)->arrival_started && ! (this)->finished )
    {
       (this)->real += (this)->temp;
-      fprintf( fp , "%" PRIu64 ",%.20f\n", (this)->temp.items_copied,
-                                              ( curr_time - (this)->prev_time) );
+      //fprintf( fp , "%" PRIu64 ",%.20f\n", (this)->temp.items_copied,
+      //                                        ( curr_time - (this)->prev_time) );
    }
    (this)->temp.items_copied = 0;
    (this)->blocked = false;
@@ -109,6 +108,6 @@ private:
    bool    blocked;
    bool    finished;
    sclock_t prev_time;
-   FILE    *fp;
+   //FILE    *fp;
 };
 #endif /* END _ARRIVALRATESAMPLETYPE_TCC_ */
