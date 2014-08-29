@@ -70,8 +70,11 @@ public:
     * @param   realized_frame_time - actual time to go through loop
     * @return  bool
     */
-   static bool updateResolution(  frame_resolution &frame,
-                                 sclock_t previous_loop_start );
+   template< class T,
+             RingBufferType type >
+   static bool updateResolution(  frame_resolution          &frame,
+                                  sclock_t                   previous_loop_start,
+                                  RingBufferBase< T, type > &buffer );
    
    /**
     * acceptEntry - accept the current frame in frame if the realized 

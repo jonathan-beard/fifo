@@ -78,16 +78,14 @@ frame_resolution::wasBlocked(  frame_resolution &frame )
  */
 bool 
 frame_resolution::updateResolution(  frame_resolution &frame,
-                                     sclock_t          prev_time )
+                                     sclock_t          prev_time 
+                                     RingBufferBase< T, type > )
 {
    
    const auto realized_frame_time( system_clock->getTime() - prev_time );
    const double p_diff( 
    ( realized_frame_time - frame.curr_frame_width ) /
       frame.curr_frame_width );
-   //fprintf( stderr, "%.20f,%.20f,%.20f\n", p_diff, 
-   //                                        frame.curr_frame_width,
-   //                                        realized_frame_time );
    auto update = [&]()
    {
       if( frame.frame_failure++ > 1 )
