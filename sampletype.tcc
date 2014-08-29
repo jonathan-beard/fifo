@@ -40,7 +40,8 @@ SampleType() : frame_width( 0 )
 
 virtual ~SampleType() = default;
 
-virtual void sample( RingBufferBase< T, type >     &buffer ) = 0;
+virtual void sample( RingBufferBase< T, type >     &buffer,
+                     bool                          &global_blocked ) = 0;
 virtual void accept( volatile bool &converged ) = 0;
 virtual void setFrameWidth( const sclock_t frame_width )
 {

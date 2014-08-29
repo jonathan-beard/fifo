@@ -29,44 +29,14 @@ frame_resolution::frame_resolution() :
                                        curr_frame_width( 0 ),
                                        curr_frame_index( 0 ),
                                        frame_success( 0 ),
-                                       frame_failure( 0 )
+                                       frame_failure( 0 ),
+                                       blocked_count( 0 ),
+                                       frame_count( 0 )
 {
-   std::memset( frame_blocked, 
-                0x0, 
-                sizeof( bool ) * NUMFRAMES );
    assert( system_clock != nullptr );
    curr_frame_width = system_clock->getResolution(); 
 }
 
-void 
-frame_resolution::setBlockedStatus(  frame_resolution &frame,
-                                     Direction         dir,
-                                     const bool blocked )
-{
-    frame.frame_blocked[ frame.curr_frame_index ][ (int) dir ]
-      = blocked;
-    frame.curr_frame_index = ( frame.curr_frame_index + 1 ) % 
-                                 NUMFRAMES;
-}
-
-/**
- * wasBlocked - returns true if at any time in the 
- * previous NUMFRAMES the queue was blocked.
- * @param   frame - frame resolution reference.
- * @return  bool - true if the queue was blocked in NUMFRAMES
- */
-bool 
-frame_resolution::wasBlocked(  frame_resolution &frame )
-{
-   for( auto i( 0 ); i < NUMFRAMES; i++ )
-   {
-      if( frame.frame_blocked[ i ][ 0 ] || frame.frame_blocked[ i ][ 1 ] )
-      {
-         return( true );
-      }
-   }
-   return( false );
-}
 
 /**
  * updateResolution - function gets called at each iteration 
@@ -78,30 +48,41 @@ frame_resolution::wasBlocked(  frame_resolution &frame )
  */
 bool 
 frame_resolution::updateResolution(  frame_resolution &frame,
-                                     sclock_t          prev_time 
-                                     RingBufferBase< T, type > )
+                                     sclock_t         previous_loop_start, 
+                                     bool             &blocked )
 {
    
-   const auto realized_frame_time( system_clock->getTime() - prev_time );
+   const auto realized_frame_time( system_clock->getTime() - previous_loop_start );
    const double p_diff( 
    ( realized_frame_time - frame.curr_frame_width ) /
       frame.curr_frame_width );
+   if( ++frame.frame_count == 5 )
+   {
+      frame.blocked_count = 0;
+   }
+
+   if( blocked )
+   {
+      frame.blocked_count++;
+      blocked = false;
+   }
    auto update = [&]()
    {
       if( frame.frame_failure++ > 1 )
       {
-         //frame.curr_frame_width += system_clock->getResolution();
-         frame.curr_frame_width *= 2;
+         frame.curr_frame_width += system_clock->getResolution();
+//         frame.curr_frame_width *= 2;
          frame.frame_failure = 0;
          frame.frame_success = 0;
+         frame.blocked_count = 0;
       }
       return( false );
    };
-   if( p_diff < ( -CONVERGENCE ) )
+   if( p_diff < ( -CONVERGENCE ) ||  frame.blocked_count < 2 )
    {
       update();
    }
-   else if ( p_diff > CONVERGENCE )
+   else if ( p_diff > CONVERGENCE || frame.blocked_count < 2 )
    {
       update(); 
    }

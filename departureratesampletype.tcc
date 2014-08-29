@@ -44,7 +44,7 @@ virtual ~DepartureRateSampleType()
 }
 
 virtual void
-sample( RingBufferBase< T, type > &buffer )
+sample( RingBufferBase< T, type > &buffer, bool &global_blocked )
 {
    Blocked departure_copy;
    buffer.get_zero_read_stats( departure_copy );
@@ -52,6 +52,7 @@ sample( RingBufferBase< T, type > &buffer )
    if( departure_copy.blocked != 0 )
    {
       (this)->blocked = true;
+      global_blocked  = true;
    }
    buffer.get_write_finished( (this)->finished );
 }
