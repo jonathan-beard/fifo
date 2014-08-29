@@ -108,11 +108,11 @@ frame_resolution::updateResolution(  frame_resolution &frame,
       update(); 
    }
    //else calc range
-   //const double upperPercent( 1.01  );
-   //const double lowerPercent( .99   );
-   ///** note: frame.curr_frame_width always > 0 **/
-   //frame.range.upper = frame.curr_frame_width * upperPercent;
-   //frame.range.lower = frame.curr_frame_width * lowerPercent;
+   const double upperPercent( 1.01  );
+   const double lowerPercent( .99   );
+   /** note: frame.curr_frame_width always > 0 **/
+   frame.range.upper = frame.curr_frame_width * upperPercent;
+   frame.range.lower = frame.curr_frame_width * lowerPercent;
    if( frame.frame_success++ > 5 )
    {
       return( true );
