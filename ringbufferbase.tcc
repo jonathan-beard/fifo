@@ -67,7 +67,7 @@ public:
     * items currently in the queue.
     * @return size_t
     */
-   size_t   size()
+   virtual std::size_t   size()
    {
       const auto   wrap_write( Pointer::wrapIndicator( data->write_pt  ) ),
                    wrap_read(  Pointer::wrapIndicator( data->read_pt   ) );
@@ -114,7 +114,7 @@ public:
     * as it needs its own FIFO to deliver signals properly.
     * @return volatile RBSignal&
     */
-   RBSignal get_signal()
+   virtual RBSignal get_signal()
    {
 #if 0      
       /** 
@@ -146,9 +146,10 @@ public:
       return( RBSignal::NONE );
    }
   
-   void send_signal( const RBSignal &signal )
+   virtual bool  send_signal( const RBSignal &signal )
    {
       //TODO, fixme
+      return( true );
    }
 
    /**
@@ -157,7 +158,7 @@ public:
     * can expect to write without blocking
     * @return  size_t
     */
-    size_t   space_avail()
+   virtual std::size_t   space_avail()
    {
       return( data->max_cap - size() );
    }
@@ -167,40 +168,9 @@ public:
     * set at compile time by the constructor.
     * @return size_t
     */
-   size_t   capacity() const
+   virtual std::size_t   capacity() const
    {
       return( data->max_cap );
-   }
-
-   /**
-    * allocate - get a reference to an object of type T at the 
-    * end of the queue.  Should be released to the queue using
-    * the push command once the calling thread is done with the 
-    * memory.
-    * @return T&, reference to memory location at head of queue
-    */
-   T& allocate()
-   {
-      while( space_avail() == 0 )
-      {
-#ifdef NICE      
-         std::this_thread::yield();
-#endif         
-         if( write_stats.blocked == 0 )
-         {   
-            write_stats.blocked = 1;
-         }
-#if __x86_64
-         __asm__ volatile("\
-           pause"
-           :
-           :
-           : );
-#endif           
-      }
-      (this)->allocate_called = true;
-      const size_t write_index( Pointer::val( data->write_pt ) );
-      return( data->store[ write_index ].item );
    }
 
    /**
@@ -209,7 +179,7 @@ public:
     * called prior to calling this function.
     * @param signal - const RBSignal signal, default: NONE
     */
-   void push( const RBSignal signal = RBSignal::NONE )
+   virtual void push( const RBSignal signal = RBSignal::NONE )
    {
       if( ! (this)->allocate_called ) return;
       const size_t write_index( Pointer::val( data->write_pt ) );
@@ -226,177 +196,13 @@ public:
       }
       (this)->allocate_called = false;
    }
-
-   /**
-    * push- writes a single item to the queue, blocks
-    * until there is enough space.
-    * @param   item, T
-    */
-   void  push( T &item, const RBSignal signal = RBSignal::NONE )
-   {
-      while( space_avail() == 0 )
-      {
-#ifdef NICE      
-         std::this_thread::yield();
-#endif         
-         if( write_stats.blocked == 0 )
-         {   
-            write_stats.blocked = 1;
-         }
-#if __x86_64
-         __asm__ volatile("\
-           pause"
-           :
-           :
-           : );
-#endif           
-      }
-      
-	   const size_t write_index( Pointer::val( data->write_pt ) );
-	   data->store[ write_index ].item     = item;
-	   data->signal[ write_index ].sig   = signal;
-	   Pointer::inc( data->write_pt );
-	   write_stats.count++;
-      if( signal == RBSignal::RBEOF )
-      {
-         (this)->write_finished = true;
-      }
-   }
    
-   /**
-    * insert - inserts the range from begin to end in the queue,
-    * blocks until space is available.  If the range is greater than
-    * available space on the queue then it'll simply add items as 
-    * space becomes available.  There is the implicit assumption that
-    * another thread is consuming the data, so eventually there will
-    * be room.
-    * @param   begin - iterator_type, iterator to begin of range
-    * @param   end   - iterator_type, iterator to end of range
-    */
-   template< class iterator_type >
-   void insert(   iterator_type begin, 
-                  iterator_type end, 
-                  const RBSignal signal = RBSignal::NONE )
-   {
-      while( begin != end )
-      {
-         while( space_avail() == 0 )
-         {
-#ifdef NICE
-            std::this_thread::yield();
-#endif
-            if( write_stats.blocked == 0 )
-            {
-               write_stats.blocked = 1;
-            }
-         }
-         const size_t write_index( Pointer::val( data->write_pt ) );
-         data->store[ write_index ].item = (*begin);
-         
-         /** add signal to last el only **/
-         if( begin == ( end - 1 ) )
-         {
-            data->signal[ write_index ].sig = signal;
-         }
-         else
-         {
-            data->signal[ write_index ].sig = RBSignal::NONE;
-         }
-         Pointer::inc( data->write_pt );
-         write_stats.count++;
-         begin++;
-      }
-      if( signal == RBSignal::RBEOF )
-      {
-         (this)->write_finished = true;
-      }
-   }
+   //TODO, you're right here converting these to virtual helper functions
+
+   
 
   
-   /**
-    * pop - read one item from the ring buffer,
-    * will block till there is data to be read
-    * @return  T, item read.  It is removed from the
-    *          q as soon as it is read
-    */
-   void 
-   pop( T &item, RBSignal *signal = nullptr )
-   {
-      while( size() == 0 )
-      {
-#ifdef NICE      
-         std::this_thread::yield();
-#endif        
-         if( read_stats.blocked == 0 )
-         {   
-            read_stats.blocked  = 1;
-         }
-#if __x86_64
-         __asm__ volatile("\
-           pause"
-           :
-           :
-           : );
-#endif           
-      }
-      const size_t read_index( Pointer::val( data->read_pt ) );
-      if( signal != nullptr )
-      {
-         *signal = data->signal[ read_index ].sig;
-      }
-      item = data->store[ read_index ].item;
-      Pointer::inc( data->read_pt );
-      read_stats.count++;
-   }
 
-   /**
-    * pop_range - pops a range and returns it as a std::array.  The
-    * exact range to be popped is specified as a template parameter.
-    * the static std::array was chosen as its a bit faster, however 
-    * this might change in future implementations to a std::vector
-    * or some other structure.
-    */
-   template< size_t N >
-   void  pop_range( std::array< T, N > &output, 
-                    std::array< RBSignal, N > *signal = nullptr )
-   {
-      while( size() < N )
-      {
-#ifdef NICE
-         std::this_thread::yield();
-#endif
-         if( read_stats.blocked == 0 )
-         {
-            read_stats.blocked = 1;
-         }
-      }
-     
-      size_t read_index;
-      if( signal != nullptr )
-      {
-         for( size_t i( 0 ); i < N; i++ )
-         {
-            read_index( Pointer::val( data->read_pt ) );
-            output[ i ]       = data->store[ read_index ].item;
-            (*signal)[ i ]    = data->signal[ read_index ].sig;
-            Pointer::inc( data->read_pt );
-            read_stats.count++;
-         }
-      }
-      else /** ignore signal **/
-      {
-         /** TODO, incorporate streaming copy here **/
-         for( size_t i( 0 ); i < N; i++ )
-         {
-            read_index( Pointer::val( data->read_pt ) );
-            output[ i ]    = data->store[ read_index ].item;
-            Pointer::inc( data->read_pt );
-            read_stats.count++;
-         }
-
-      }
-      return;
-   }
 
 
    /**
@@ -481,6 +287,218 @@ public:
    }
 
 protected:
+   /**
+    * local_allocate - get a reference to an object of type T at the 
+    * end of the queue.  Should be released to the queue using
+    * the push command once the calling thread is done with the 
+    * memory.
+    * @return T&, reference to memory location at head of queue
+    */
+   virtual void local_allocate( void **ptr )
+   {
+      while( space_avail() == 0 )
+      {
+#ifdef NICE      
+         std::this_thread::yield();
+#endif         
+         if( write_stats.blocked == 0 )
+         {   
+            write_stats.blocked = 1;
+         }
+#if __x86_64
+         __asm__ volatile("\
+           pause"
+           :
+           :
+           : );
+#endif           
+      }
+      (this)->allocate_called = true;
+      const size_t write_index( Pointer::val( data->write_pt ) );
+      *ptr = (void*)&(data->store[ write_index ].item);
+   }
+   
+   /**
+    * local_push - implements the pure virtual function from the 
+    * FIFO interface.  Takes a void ptr as the object which is
+    * cast into the correct form and an RBSignal signal.
+    * @param   item, void ptr
+    * @param   signal, const RBSignal&
+    */
+   virtual void  local_push( void *item, const RBSignal &signal )
+   {
+      assert( item != nullptr );
+      while( space_avail() == 0 )
+      {
+#ifdef NICE      
+         std::this_thread::yield();
+#endif         
+         if( write_stats.blocked == 0 )
+         {   
+            write_stats.blocked = 1;
+         }
+#if __x86_64
+         __asm__ volatile("\
+           pause"
+           :
+           :
+           : );
+#endif           
+      }
+      
+	   const size_t write_index( Pointer::val( data->write_pt ) );
+      T *item( reinterpret_cast< T* >( ptr ) );
+	   data->store[ write_index ].item     = *item;
+	   data->signal[ write_index ].sig     = signal;
+	   Pointer::inc( data->write_pt );
+	   write_stats.count++;
+      if( signal == RBSignal::RBEOF )
+      {
+         (this)->write_finished = true;
+      }
+   }
+   
+   /**
+    * insert - inserts the range from begin to end in the queue,
+    * blocks until space is available.  If the range is greater than
+    * available space on the queue then it'll simply add items as 
+    * space becomes available.  There is the implicit assumption that
+    * another thread is consuming the data, so eventually there will
+    * be room.
+    * @param   begin - iterator_type, iterator to begin of range
+    * @param   end   - iterator_type, iterator to end of range
+    */
+   virtual void local_insert(  void *begin_ptr,
+                         void *end_ptr,
+                         const RBSignal &signal )
+   {
+      
+      auto *begin( 
+         reinterpret_cast< RingBufferBase< T, type > >::iterator* >( begin_ptr ) );
+      auto *end( 
+         reinterpret_cast< RingBufferBase< T, type > >::iterator* >( end_ptr ) );
+
+      while( *begin != *end )
+      {
+         while( space_avail() == 0 )
+         {
+#ifdef NICE
+            std::this_thread::yield();
+#endif
+            if( write_stats.blocked == 0 )
+            {
+               write_stats.blocked = 1;
+            }
+         }
+         const size_t write_index( Pointer::val( data->write_pt ) );
+         data->store[ write_index ].item = (**begin);
+         
+         /** add signal to last el only **/
+         if( *begin == ( *end - 1 ) )
+         {
+            data->signal[ write_index ].sig = signal;
+         }
+         else
+         {
+            data->signal[ write_index ].sig = RBSignal::NONE;
+         }
+         Pointer::inc( data->write_pt );
+         write_stats.count++;
+         (*begin)++;
+      }
+      if( signal == RBSignal::RBEOF )
+      {
+         (this)->write_finished = true;
+      }
+   }
+   
+   /**
+    * local_pop - read one item from the ring buffer,
+    * will block till there is data to be read
+    * @return  T, item read.  It is removed from the
+    *          q as soon as it is read
+    */
+   virtual void 
+   local_pop( void *ptr, RBSignal *signal = nullptr )
+   {
+      while( size() == 0 )
+      {
+#ifdef NICE      
+         std::this_thread::yield();
+#endif        
+         if( read_stats.blocked == 0 )
+         {   
+            read_stats.blocked  = 1;
+         }
+#if __x86_64
+         __asm__ volatile("\
+           pause"
+           :
+           :
+           : );
+#endif           
+      }
+      const std::size_t read_index( Pointer::val( data->read_pt ) );
+      if( signal != nullptr )
+      {
+         *signal = data->signal[ read_index ].sig;
+      }
+      /** gotta dereference pointer and copy **/
+      T *item( reinterpret_cast< T* >( ptr ) );
+      *item = data->store[ read_index ].item;
+      Pointer::inc( data->read_pt );
+      read_stats.count++;
+   }
+   
+   /** FIXME - come back here in the morning **/
+   /**
+    * pop_range - pops a range and returns it as a std::array.  The
+    * exact range to be popped is specified as a template parameter.
+    * the static std::array was chosen as its a bit faster, however 
+    * this might change in future implementations to a std::vector
+    * or some other structure.
+    */
+   virtual void  pop_range( void *ptr_data 
+                            std::array< RBSignal, N > *signal = nullptr )
+   {
+      while( size() < N )
+      {
+#ifdef NICE
+         std::this_thread::yield();
+#endif
+         if( read_stats.blocked == 0 )
+         {
+            read_stats.blocked = 1;
+         }
+      }
+     
+      size_t read_index;
+      if( signal != nullptr )
+      {
+         for( size_t i( 0 ); i < N; i++ )
+         {
+            read_index( Pointer::val( data->read_pt ) );
+            output[ i ]       = data->store[ read_index ].item;
+            (*signal)[ i ]    = data->signal[ read_index ].sig;
+            Pointer::inc( data->read_pt );
+            read_stats.count++;
+         }
+      }
+      else /** ignore signal **/
+      {
+         /** TODO, incorporate streaming copy here **/
+         for( size_t i( 0 ); i < N; i++ )
+         {
+            read_index( Pointer::val( data->read_pt ) );
+            output[ i ]    = data->store[ read_index ].item;
+            Pointer::inc( data->read_pt );
+            read_stats.count++;
+         }
+
+      }
+      return;
+   }
+
    /**
     * Buffer structure that is the core of the ring
     * buffer.
