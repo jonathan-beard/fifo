@@ -50,7 +50,8 @@ virtual ~ArrivalRateSampleType()
 }
 
 virtual void
-sample( RingBufferBase< T, type > &buffer )
+sample( RingBufferBase< T, type > &buffer,
+        bool                      &global_blocked )
 {
    /** nomenclature is a but funky but arrival = writes to queue **/ 
    Blocked arrival_copy;
@@ -60,6 +61,7 @@ sample( RingBufferBase< T, type > &buffer )
       if( arrival_copy.count != 0 )
       {
          (this)->arrival_started = true;
+         global_blocked          = true;
       }
       return;
    }

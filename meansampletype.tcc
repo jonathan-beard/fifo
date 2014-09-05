@@ -37,7 +37,8 @@ virtual ~MeanSampleType()
 
 
 virtual void
-sample( RingBufferBase< T, type > &buffer )
+sample( RingBufferBase< T, type > &buffer,
+        bool                      &global_blocked )
 {
    (this)->temp.occupancy    += buffer.size();
 }

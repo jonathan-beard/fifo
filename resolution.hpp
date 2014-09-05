@@ -21,6 +21,7 @@
 #define _RESOLUTION_HPP_  1
 #include <cstdint>
 
+#include "ringbufferbase.tcc"
 #include "ringbuffertypes.hpp"
 #include "Clock.hpp"
 
@@ -70,12 +71,9 @@ public:
     * @param   realized_frame_time - actual time to go through loop
     * @return  bool
     */
-   template< class T,
-             RingBufferType type >
    static bool updateResolution(  frame_resolution          &frame,
                                   sclock_t                   previous_loop_start,
-                                  RingBufferBase< T, type > &buffer );
-   
+                                  bool                      &blocked );
    /**
     * acceptEntry - accept the current frame in frame if the realized 
     * interval for this observation is within the expected range.
@@ -95,7 +93,6 @@ public:
 private:
    sclock_t          curr_frame_width;
    /** might be faster with a bit vector **/
-   bool              frame_blocked[ NUMFRAMES ][ 2 ];
    std::int32_t      curr_frame_index;
    struct
    {
@@ -104,5 +101,7 @@ private:
    }range;
    std::uint16_t     frame_success;
    std::uint16_t     frame_failure;
+   std::uint16_t     blocked_count;
+   std::uint16_t     frame_count;
 };
 #endif /* END _RESOLUTION_HPP_ */

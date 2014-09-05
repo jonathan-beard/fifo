@@ -22,6 +22,8 @@
 
 #include <functional>
 #include <vector>
+#include "ringbuffertypes.hpp"
+#include "ringbufferbase.tcc"
 #include "sampletype.tcc"
 #include "resolution.hpp"
 
@@ -64,13 +66,14 @@ run( RingBufferBase< T, type > &buffer,
 {
    sclock_t prev_time( system_clock->getTime() );
    bool converged( false );
+   bool blocked(   false );
    frame_resolution  resolution;
    while( ! term )
    {
       frame_resolution::waitForInterval( resolution );
       for( SampleType< T, type > *s : *(self.sample_list) )
       {
-         s->sample( buffer );
+         s->sample( buffer, blocked );
       }
       const auto end_time( system_clock->getTime() );
       if( frame_resolution::acceptEntry( resolution,
@@ -83,7 +86,10 @@ run( RingBufferBase< T, type > &buffer,
       }
       if( ! converged )
       {
-         converged = frame_resolution::updateResolution( resolution, prev_time );
+         converged = 
+            frame_resolution::updateResolution( resolution, 
+                                                prev_time,
+                                                blocked );
          if( converged )
          {
             for( SampleType< T, type > *s : *(self.sample_list) )
