@@ -139,7 +139,7 @@ public:
    {
       void *begin_ptr( (void*)&begin );
       void *end_ptr  ( (void*)&end   );
-      local_insert( begin_ptr, end_ptr, signal );
+      local_insert( begin_ptr, end_ptr, signal, typeid( iterator_type ).hash_code() );
       return;
    }
    
@@ -259,7 +259,8 @@ protected:
     */
    virtual void local_insert( void *ptr_begin, 
                               void *ptr_end, 
-                              const RBSignal &signal ) = 0;
+                              const RBSignal &signal,
+                              const std::size_t iterator_type ) = 0;
   
    /**
     * local_pop - makes a copy, pops an item from the queue and 

@@ -29,6 +29,7 @@
 #include <cstddef>
 #include <iterator>
 #include <list>
+#include <vector>
 
 #include "Clock.hpp"
 #include "pointer.hpp"
@@ -323,26 +324,11 @@ protected:
          (this)->write_finished = true;
       }
    }
-   
-   /**
-    * insert - inserts the range from begin to end in the queue,
-    * blocks until space is available.  If the range is greater than
-    * available space on the queue then it'll simply add items as 
-    * space becomes available.  There is the implicit assumption that
-    * another thread is consuming the data, so eventually there will
-    * be room.
-    * @param   begin - iterator_type, iterator to begin of range
-    * @param   end   - iterator_type, iterator to end of range
-    */
-   virtual void local_insert(  void *begin_ptr,
-                         void *end_ptr,
-                         const RBSignal &signal )
+  
+   template < class iterator_type > void local_insert_helper( iterator_type begin, 
+                                                              iterator_type end,
+                                                              const RBSignal &signal )
    {
-     
-      typedef typename std::list< T >::iterator iterator;
-      auto *begin( reinterpret_cast< iterator* >( begin_ptr ) );
-      auto *end(   reinterpret_cast< iterator* >( end_ptr ) );
-
       while( begin != end )
       {
          while( space_avail() == 0 )
@@ -375,6 +361,50 @@ protected:
       {
          (this)->write_finished = true;
       }
+   }
+
+   /**
+    * insert - inserts the range from begin to end in the queue,
+    * blocks until space is available.  If the range is greater than
+    * available space on the queue then it'll simply add items as 
+    * space becomes available.  There is the implicit assumption that
+    * another thread is consuming the data, so eventually there will
+    * be room.
+    * @param   begin - iterator_type, iterator to begin of range
+    * @param   end   - iterator_type, iterator to end of range
+    */
+   virtual void local_insert(  void *begin_ptr,
+                               void *end_ptr,
+                               const RBSignal &signal, 
+                               const std::size_t iterator_type )
+   {
+      typedef typename std::list< T >::iterator   it_list;
+      constexpr std::size_t it_list_hash( typeid( it_list ).hash_code() );
+      typedef typename std::vector< T >::iterator it_vec;
+      constexpr std::size_t it_vec_hash( typeid( it_vec ).hash_code() ); 
+      switch( iterator_type )
+      {
+         case( it_list_hash ):
+         {
+            it_list *begin( reinterpret_cast< it_list* >( begin_ptr ) );
+            it_list *end  ( reinterpret_cast< it_list* >( end_ptr   ) );
+            local_insert_helper( *begin, *end, signal );
+         }
+         break;
+         case( it_vec_hash ):
+         {
+            it_vec *begin( reinterpret_cast< it_vec* >( begin_ptr ) );
+            it_vec *end  ( reinterpret_cast< it_vec* >( end_ptr   ) );
+            local_insert_helper( *begin, *end, signal );
+         }
+         break;
+         default:
+         {
+            std::cerr << "Type not found.\n";
+            assert( false );
+         }
+      }
+      return;
    }
    
    /**
