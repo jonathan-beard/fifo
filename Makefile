@@ -6,7 +6,7 @@ CFLAGS   =  -O2 -g  -Wall -std=c99
 CXXFLAGS =  -O2 -g  -Wall -std=c++11  -DRDTSCP=1 -DLIMITRATE=1
 
 COBJS = getrandom
-CXXOBJS = main pointer shm Clock procwait resolution 
+CXXOBJS = main pointer shm Clock procwait resolution fifo
 
 CFILES = $(addsuffix .c, $(COBJS) )
 CXXFILES = $(addsuffix .cpp, $(CXXOBJS) )

@@ -26,12 +26,17 @@
 #include <thread>
 #include <cstring>
 #include <iostream>
+#include <cstddef>
+#include <iterator>
+#include <list>
+
 #include "Clock.hpp"
 #include "pointer.hpp"
 #include "ringbuffertypes.hpp"
 #include "bufferdata.tcc"
 #include "signalvars.hpp"
 #include "blocked.hpp"
+#include "fifo.hpp"
 
 /**
  * Note: there is a NICE define that can be uncommented
@@ -45,13 +50,14 @@ extern Clock *system_clock;
 
 
 template < class T, 
-           RingBufferType type > class RingBufferBase {
+           RingBufferType type > class RingBufferBase : public FIFO {
 public:
    /**
     * RingBuffer - default constructor, initializes basic
     * data structures.
     */
-   RingBufferBase() : data( nullptr ),
+   RingBufferBase() : FIFO(),
+                      data( nullptr ),
                       allocate_called( false ),
                       write_finished( false )
    {
@@ -197,52 +203,12 @@ public:
       (this)->allocate_called = false;
    }
    
-   //TODO, you're right here converting these to virtual helper functions
-
-   
-
-  
-
-
-
    /**
-    * peek() - look at a reference to the head of the
-    * ring buffer.  This doesn't remove the item, but it 
-    * does give the user a chance to take a look at it without
-    * removing.
-    * @return T&
-    */
-    T& peek(  RBSignal *signal = nullptr )
-   {
-      while( size() < 1 )
-      {
-#ifdef NICE      
-         std::this_thread::yield();
-#endif     
-#if  __x86_64   
-         __asm__ volatile("\
-           pause"
-           :
-           :
-           : );
-#endif
-      }
-      const size_t read_index( Pointer::val( data->read_pt ) );
-      if( signal != nullptr )
-      {
-         *signal = data->signal[ read_index ].sig;
-      }
-      T &output( data->store[ read_index ].item );
-      return( output );
-   }
-
-
-   /**
-    * recycle - To be used in conjunction with peek().  Simply
+    :* recycle - To be used in conjunction with peek().  Simply
     * removes the item at the head of the queue and discards them
     * @param range - const size_t, default range is 1
     */
-   void recycle( const size_t range = 1 )
+   virtual void recycle( const size_t range = 1 )
    {
       assert( range <= data->max_cap );
       Pointer::incBy( range, data->read_pt );
@@ -255,7 +221,7 @@ public:
     * current vars to zero.
     * @param   copy - Blocked&
     */
-   void get_zero_read_stats( Blocked &copy )
+   virtual void get_zero_read_stats( Blocked &copy )
    {
       copy.all       = read_stats.all;
       read_stats.all = 0;
@@ -267,7 +233,7 @@ public:
     * current vars to zero.
     * @param   copy - Blocked&
     */
-   void get_zero_write_stats( Blocked &copy )
+   virtual void get_zero_write_stats( Blocked &copy )
    {
       copy.all       = write_stats.all;
       write_stats.all = 0;
@@ -281,7 +247,7 @@ public:
     * its vital for instrumentation.
     * @param   write_finished - bool&
     */
-   void get_write_finished( bool &write_finished )
+   virtual void get_write_finished( bool &write_finished )
    {
       write_finished = (this)->write_finished;
    }
@@ -325,9 +291,9 @@ protected:
     * @param   item, void ptr
     * @param   signal, const RBSignal&
     */
-   virtual void  local_push( void *item, const RBSignal &signal )
+   virtual void  local_push( void *ptr, const RBSignal &signal )
    {
-      assert( item != nullptr );
+      assert( ptr != nullptr );
       while( space_avail() == 0 )
       {
 #ifdef NICE      
@@ -372,13 +338,12 @@ protected:
                          void *end_ptr,
                          const RBSignal &signal )
    {
-      
-      auto *begin( 
-         reinterpret_cast< RingBufferBase< T, type > >::iterator* >( begin_ptr ) );
-      auto *end( 
-         reinterpret_cast< RingBufferBase< T, type > >::iterator* >( end_ptr ) );
+     
+      typedef typename std::list< T >::iterator iterator;
+      auto *begin( reinterpret_cast< iterator* >( begin_ptr ) );
+      auto *end(   reinterpret_cast< iterator* >( end_ptr ) );
 
-      while( *begin != *end )
+      while( begin != end )
       {
          while( space_avail() == 0 )
          {
@@ -391,10 +356,10 @@ protected:
             }
          }
          const size_t write_index( Pointer::val( data->write_pt ) );
-         data->store[ write_index ].item = (**begin);
+         data->store[ write_index ].item = (*begin);
          
          /** add signal to last el only **/
-         if( *begin == ( *end - 1 ) )
+         if( begin == ( end - 1 ) )
          {
             data->signal[ write_index ].sig = signal;
          }
@@ -404,7 +369,7 @@ protected:
          }
          Pointer::inc( data->write_pt );
          write_stats.count++;
-         (*begin)++;
+         ++begin;
       }
       if( signal == RBSignal::RBEOF )
       {
@@ -419,7 +384,7 @@ protected:
     *          q as soon as it is read
     */
    virtual void 
-   local_pop( void *ptr, RBSignal *signal = nullptr )
+   local_pop( void *ptr, RBSignal *signal )
    {
       while( size() == 0 )
       {
@@ -450,7 +415,6 @@ protected:
       read_stats.count++;
    }
    
-   /** FIXME - come back here in the morning **/
    /**
     * pop_range - pops a range and returns it as a std::array.  The
     * exact range to be popped is specified as a template parameter.
@@ -458,10 +422,20 @@ protected:
     * this might change in future implementations to a std::vector
     * or some other structure.
     */
-   virtual void  pop_range( void *ptr_data 
-                            std::array< RBSignal, N > *signal = nullptr )
+   virtual void  local_pop_range( void     *ptr_data,
+                                  RBSignal *signal,
+                                  std::size_t n_items )
    {
-      while( size() < N )
+      assert( ptr_data != nullptr );
+      
+      if( n_items == 0 )
+      {
+         return;
+      }
+
+      auto *items( reinterpret_cast< T* >( ptr_data ) );
+      
+      while( size() < n_items )
       {
 #ifdef NICE
          std::this_thread::yield();
@@ -473,13 +447,15 @@ protected:
       }
      
       size_t read_index;
+      
+
       if( signal != nullptr )
       {
-         for( size_t i( 0 ); i < N; i++ )
+         for( size_t i( 0 ); i < n_items ; i++ )
          {
             read_index( Pointer::val( data->read_pt ) );
-            output[ i ]       = data->store[ read_index ].item;
-            (*signal)[ i ]    = data->signal[ read_index ].sig;
+            items[ i ] = data->store [ read_index ].item;
+            signal  [ i ] = data->signal[ read_index ].sig;
             Pointer::inc( data->read_pt );
             read_stats.count++;
          }
@@ -487,15 +463,46 @@ protected:
       else /** ignore signal **/
       {
          /** TODO, incorporate streaming copy here **/
-         for( size_t i( 0 ); i < N; i++ )
+         for( size_t i( 0 ); i < n_items; i++ )
          {
             read_index( Pointer::val( data->read_pt ) );
-            output[ i ]    = data->store[ read_index ].item;
+            items[ i ]    = data->store[ read_index ].item;
             Pointer::inc( data->read_pt );
             read_stats.count++;
          }
 
       }
+      return;
+   }
+   
+   /**
+    * local_peek() - look at a reference to the head of the
+    * ring buffer.  This doesn't remove the item, but it 
+    * does give the user a chance to take a look at it without
+    * removing.
+    * @return T&
+    */
+   virtual void local_peek(  void **ptr, RBSignal *signal )
+   {
+      while( size() < 1 )
+      {
+#ifdef NICE      
+         std::this_thread::yield();
+#endif     
+#if  __x86_64   
+         __asm__ volatile("\
+           pause"
+           :
+           :
+           : );
+#endif
+      }
+      const size_t read_index( Pointer::val( data->read_pt ) );
+      if( signal != nullptr )
+      {
+         *signal = data->signal[ read_index ].sig;
+      }
+      *ptr = (void*) &( data->store[ read_index ].item );
       return;
    }
 

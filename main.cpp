@@ -52,7 +52,7 @@ producer( Data &data, TheBuffer &buffer )
    const float serviceTime( 10.0e-6 );
    while( current_count++ < data.send_count )
    {
-      auto &ref( buffer.allocate() );
+      auto &ref( buffer.allocate< std::int64_t >() );
       ref = current_count;
       buffer.push( /* current_count, */ 
          (current_count == data.send_count ? 
