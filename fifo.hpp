@@ -20,6 +20,7 @@
 #ifndef _FIFO_HPP_
 #define _FIFO_HPP_  1
 #include <cstddef>
+#include <typeinfo>
 
 #include "blocked.hpp"
 #include "signalvars.hpp"

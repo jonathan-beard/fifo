@@ -30,6 +30,8 @@
 #include <iterator>
 #include <list>
 #include <vector>
+#include <map>
+#include <functional>
 
 #include "Clock.hpp"
 #include "pointer.hpp"
@@ -329,7 +331,8 @@ protected:
                                                               iterator_type end,
                                                               const RBSignal &signal )
    {
-      while( begin != end )
+      auto dist( std::distance( begin, end ) );
+      while( --dist )
       {
          while( space_avail() == 0 )
          {
@@ -345,7 +348,7 @@ protected:
          data->store[ write_index ].item = (*begin);
          
          /** add signal to last el only **/
-         if( begin == ( end - 1 ) )
+         if( dist == 0 )
          {
             data->signal[ write_index ].sig = signal;
          }
@@ -379,30 +382,33 @@ protected:
                                const std::size_t iterator_type )
    {
       typedef typename std::list< T >::iterator   it_list;
-      constexpr std::size_t it_list_hash( typeid( it_list ).hash_code() );
       typedef typename std::vector< T >::iterator it_vec;
-      constexpr std::size_t it_vec_hash( typeid( it_vec ).hash_code() ); 
-      switch( iterator_type )
+      std::map< std::size_t, 
+                std::function< void (void*,void*,const RBSignal&) > > func_map
+                  = {{ typeid( it_list ).hash_code(), 
+                       [ & ]( void *b_ptr, void *e_ptr, const RBSignal &sig )
+                       {
+                           it_list *begin( reinterpret_cast< it_list* >( b_ptr ) );
+                           it_list *end  ( reinterpret_cast< it_list* >( e_ptr   ) );
+                           local_insert_helper( *begin, *end, signal );
+                       } },
+                     { typeid( it_vec ).hash_code(),
+                       [ & ]( void *b_ptr, void *e_ptr, const RBSignal &sig )
+                       {
+                           it_vec *begin( reinterpret_cast< it_vec* >( b_ptr ) );
+                           it_vec *end  ( reinterpret_cast< it_vec* >( e_ptr   ) );
+                           local_insert_helper( *begin, *end, signal );
+
+                       } } };
+      auto f = func_map.find( iterator_type );
+      if( f != func_map.end() )
       {
-         case( it_list_hash ):
-         {
-            it_list *begin( reinterpret_cast< it_list* >( begin_ptr ) );
-            it_list *end  ( reinterpret_cast< it_list* >( end_ptr   ) );
-            local_insert_helper( *begin, *end, signal );
-         }
-         break;
-         case( it_vec_hash ):
-         {
-            it_vec *begin( reinterpret_cast< it_vec* >( begin_ptr ) );
-            it_vec *end  ( reinterpret_cast< it_vec* >( end_ptr   ) );
-            local_insert_helper( *begin, *end, signal );
-         }
-         break;
-         default:
-         {
-            std::cerr << "Type not found.\n";
-            assert( false );
-         }
+         (*f).second( begin_ptr, end_ptr, signal );
+      }
+      else
+      {
+         /** TODO, throw exception **/
+         assert( false );
       }
       return;
    }
@@ -483,7 +489,7 @@ protected:
       {
          for( size_t i( 0 ); i < n_items ; i++ )
          {
-            read_index( Pointer::val( data->read_pt ) );
+            read_index = Pointer::val( data->read_pt );
             items[ i ] = data->store [ read_index ].item;
             signal  [ i ] = data->signal[ read_index ].sig;
             Pointer::inc( data->read_pt );
@@ -495,7 +501,7 @@ protected:
          /** TODO, incorporate streaming copy here **/
          for( size_t i( 0 ); i < n_items; i++ )
          {
-            read_index( Pointer::val( data->read_pt ) );
+            read_index = Pointer::val( data->read_pt );
             items[ i ]    = data->store[ read_index ].item;
             Pointer::inc( data->read_pt );
             read_stats.count++;

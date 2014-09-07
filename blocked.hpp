@@ -19,7 +19,7 @@
  */
 #ifndef _BLOCKED_HPP_
 #define _BLOCKED_HPP_  1
-
+#include <cstdint>
 
 union Blocked
 {
