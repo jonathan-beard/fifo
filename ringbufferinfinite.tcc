@@ -27,7 +27,8 @@ public:
     * RingBuffer - default constructor, initializes basic
     * data structures.
     */
-   RingBufferBase() : data( nullptr ),
+   RingBufferBase() : FIFO(),
+                      data( nullptr ),
                       allocate_called( false ),
                       write_finished( false )
    {
@@ -43,12 +44,12 @@ public:
     * items currently in the queue.
     * @return size_t
     */
-   size_t   size()
+   virtual std::size_t   size()
    {
       return( 1 );
    }
 
-   RBSignal get_signal() 
+   virtual RBSignal get_signal() 
    {
 #if 0   
       /** 
@@ -71,9 +72,10 @@ public:
       return( RBSignal::NONE );
    }
 
-   void send_signal( const RBSignal &signal )
+   virtual bool send_signal( const RBSignal &signal )
    {
       //(this)->signal = signal;
+      return( true );
    }
 
    /**
@@ -82,7 +84,7 @@ public:
     * can expect to write without blocking
     * @return  size_t
     */
-    size_t   space_avail()
+   virtual std::size_t   space_avail()
    {
       return( data->max_cap );
    }
@@ -93,24 +95,12 @@ public:
     * set at compile time by the constructor.
     * @return size_t
     */
-   size_t   capacity() const
+   virtual std::size_t   capacity() const
    {
       return( data->max_cap );
    }
 
    
-   /**
-    * allocate - get a reference to an object of type T at the 
-    * end of the queue.  Should be released to the queue using
-    * the push command once the calling thread is done with the 
-    * memory.
-    * @return T&, reference to memory location at head of queue
-    */
-   T& allocate()
-   {
-      (this)->allocate_called = true;
-      return( data->store[ 0 ].item );
-   }
 
    /**
     * push - releases the last item allocated by allocate() to
@@ -249,6 +239,19 @@ public:
    }
 
 protected:
+   //TODO, come back to here
+   /**
+    * local_allocate - get a reference to an object of type T at the 
+    * end of the queue.  Should be released to the queue using
+    * the push command once the calling thread is done with the 
+    * memory.
+    * @return T&, reference to memory location at head of queue
+    */
+   T& local_allocate()
+   {
+      (this)->allocate_called = true;
+      return( data->store[ 0 ].item );
+   }
    /** go ahead and allocate a buffer as a heap, doesn't really matter **/
    Buffer::Data< T, RingBufferType::Heap >      *data;
    /** note, these need to get moved into the data struct **/
