@@ -21,13 +21,14 @@
 #define _RINGBUFFERHEAP_TCC_  1
 
 template < class T, 
-           RingBufferType type > class RingBufferBase : public FIFO {
+           RingBufferType type > class RingBufferBase : 
+            public FIFOAbstract< T, type > {
 public:
    /**
     * RingBuffer - default constructor, initializes basic
     * data structures.
     */
-   RingBufferBase() : FIFO(),
+   RingBufferBase() : FIFOAbstract< T, type >(),
                       data( nullptr ),
                       allocate_called( false ),
                       write_finished( false )
@@ -179,7 +180,7 @@ public:
     * removes the item at the head of the queue and discards them
     * @param range - const size_t, default range is 1
     */
-   virtual void recycle( const size_t range = 1 )
+   virtual void recycle( const std::size_t range = 1 )
    {
       assert( range <= data->max_cap );
       Pointer::incBy( range, data->read_pt );
@@ -332,7 +333,9 @@ protected:
       {
          (this)->write_finished = true;
       }
+      return;
    }
+   
 
    /**
     * insert - inserts the range from begin to end in the queue,
@@ -349,26 +352,29 @@ protected:
                                const RBSignal &signal, 
                                const std::size_t iterator_type )
    {
-      typedef typename std::list< T >::iterator   it_list;
-      typedef typename std::vector< T >::iterator it_vec;
-      std::map< std::size_t, 
-                std::function< void (void*,void*,const RBSignal&) > > func_map
-                  = {{ typeid( it_list ).hash_code(), 
-                       [ & ]( void *b_ptr, void *e_ptr, const RBSignal &sig )
-                       {
-                           it_list *begin( reinterpret_cast< it_list* >( b_ptr ) );
-                           it_list *end  ( reinterpret_cast< it_list* >( e_ptr   ) );
-                           local_insert_helper( *begin, *end, signal );
-                       } },
-                     { typeid( it_vec ).hash_code(),
-                       [ & ]( void *b_ptr, void *e_ptr, const RBSignal &sig )
-                       {
-                           it_vec *begin( reinterpret_cast< it_vec* >( b_ptr ) );
-                           it_vec *end  ( reinterpret_cast< it_vec* >( e_ptr   ) );
-                           local_insert_helper( *begin, *end, signal );
+   typedef typename std::list< T >::iterator   it_list;
+   typedef typename std::vector< T >::iterator it_vec;
+   
 
-                       } } };
-      auto f = func_map.find( iterator_type );
+      
+   const std::map< std::size_t, 
+             std::function< void (void*,void*,const RBSignal&) > > func_map
+               = {{ typeid( it_list ).hash_code(), 
+                    [ & ]( void *b_ptr, void *e_ptr, const RBSignal &sig )
+                    {
+                        it_list *begin( reinterpret_cast< it_list* >( b_ptr ) );
+                        it_list *end  ( reinterpret_cast< it_list* >( e_ptr   ) );
+                        local_insert_helper( *begin, *end, signal );
+                    } },
+                  { typeid( it_vec ).hash_code(),
+                    [ & ]( void *b_ptr, void *e_ptr, const RBSignal &sig )
+                    {
+                        it_vec *begin( reinterpret_cast< it_vec* >( b_ptr ) );
+                        it_vec *end  ( reinterpret_cast< it_vec* >( e_ptr   ) );
+                        local_insert_helper( *begin, *end, signal );
+
+                    } } };
+      auto f( func_map.find( iterator_type ) );
       if( f != func_map.end() )
       {
          (*f).second( begin_ptr, end_ptr, signal );

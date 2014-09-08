@@ -20,14 +20,15 @@
 #ifndef _RINGBUFFERINFINITE_TCC_
 #define _RINGBUFFERINFINITE_TCC_  1
 
-template < class T > class RingBufferBase< T, RingBufferType::Infinite > : public FIFO
+template < class T > class RingBufferBase< T, RingBufferType::Infinite > : 
+   public FIFOAbstract< T, RingBufferType::Infinite >
 {
 public:
    /**
     * RingBuffer - default constructor, initializes basic
     * data structures.
     */
-   RingBufferBase() : FIFO(),
+   RingBufferBase() : FIFOAbstract< T, RingBufferType::Infinite >(),
                       data( nullptr ),
                       allocate_called( false ),
                       write_finished( false )
@@ -108,7 +109,7 @@ public:
     * called prior to calling this function.
     * @param signal - const RBSignal signal, default: NONE
     */
-   void push( const RBSignal signal = RBSignal::NONE )
+   virtual void push( const RBSignal signal = RBSignal::NONE )
    {
       if( ! (this)->allocate_called ) return;
       data->signal[ 0 ].sig = signal;
@@ -116,29 +117,51 @@ public:
       (this)->allocate_called = false;
    }
 
+   
    /**
-    * push - This version won't write anything, it'll
-    * increment the counter and simply return;
-    * @param   item, T
+    * recycle - remove ``range'' items from the head of the
+    * queue and discard them.  Can be used in conjunction with
+    * the peek operator.
+    * @param   range - const size_t, default = 1
     */
-   void  push( T &item, const RBSignal signal = RBSignal::NONE )
+   virtual void recycle( const std::size_t range = 1 )
    {
-      data->store [ 0 ].item  = item;
+      read_stats.count += range;
+   }
+
+   virtual void get_zero_read_stats( Blocked &copy )
+   {
+      copy.all       = read_stats.all;
+      read_stats.all = 0;
+   }
+
+   virtual void get_zero_write_stats( Blocked &copy )
+   {
+      copy.all       = write_stats.all;
+      write_stats.all = 0;
+   }
+
+protected:
+   
+   virtual void  local_allocate( void **ptr )
+   {
+      (this)->allocate_called = true;
+      *ptr = (void*)&(data->store[ 0 ].item);
+   }
+   
+   virtual void  local_push( void *ptr, const RBSignal signal )
+   {
+      T *item (reinterpret_cast< T* >( ptr ) );
+      data->store [ 0 ].item  = *item;
       /** a bit awkward since it gives the same behavior as the actual queue **/
       data->signal[ 0 ].sig  = signal;
       write_stats.count++;
    }
 
-   /**
-    * insert - insert a range of items into the queue.
-    * @param   begin - start iterator
-    * @param   end   - ending iterator
-    * @param   signal - const RBSignal, set if you want to send a signal
-    */
    template< class iterator_type >
-   void insert( iterator_type begin, 
-                iterator_type end, 
-                const RBSignal signal = RBSignal::NONE )
+   void local_insert_helper( iterator_type begin, 
+                             iterator_type end, 
+                             const RBSignal signal )
    {
       while( begin != end )
       {
@@ -147,18 +170,51 @@ public:
          write_stats.count++;
       }
       data->signal[ 0 ].sig = signal;
+      return;
    }
- 
+   
 
-   /**
-    * pop - This version won't return any useful data,
-    * its just whatever is in the buffer which should be zeros.
-    * @return  T, item read.  It is removed from the
-    *          q as soon as it is read
-    */
-   void pop( T &item, RBSignal *signal = nullptr )
+   virtual void local_insert( void *begin_ptr,
+                              void *end_ptr,
+                              const RBSignal &signal,
+                              const std::size_t iterator_type )
    {
-      item  = data->store[ 0 ].item;
+      typedef typename std::list< T >::iterator   it_list;
+      typedef typename std::vector< T >::iterator it_vec;
+         
+      const std::map< std::size_t, 
+                std::function< void (void*,void*,const RBSignal&) > > func_map
+                  = {{ typeid( it_list ).hash_code(), 
+                       [ & ]( void *b_ptr, void *e_ptr, const RBSignal &sig )
+                       {
+                           it_list *begin( reinterpret_cast< it_list* >( b_ptr ) );
+                           it_list *end  ( reinterpret_cast< it_list* >( e_ptr   ) );
+                           local_insert_helper( *begin, *end, signal );
+                       } },
+                     { typeid( it_vec ).hash_code(),
+                       [ & ]( void *b_ptr, void *e_ptr, const RBSignal &sig )
+                       {
+                           it_vec *begin( reinterpret_cast< it_vec* >( b_ptr ) );
+                           it_vec *end  ( reinterpret_cast< it_vec* >( e_ptr   ) );
+                           local_insert_helper( *begin, *end, signal );
+
+                       } } };
+      auto f( (this)->func_map.find( iterator_type ) );
+      if( f != (this)->func_map.end() )
+      {
+         (*f).second( begin_ptr, end_ptr, signal );
+      }
+      else
+      {
+         /** TODO, throw exception **/
+      }
+      return;
+   }
+
+   virtual void local_pop( void *ptr, RBSignal *signal )
+   {
+      T *item( reinterpret_cast< T* >( ptr ) );
+      *item  = data->store[ 0 ].item;
       if( signal != nullptr )
       {
          *signal = data->signal[ 0 ].sig;
@@ -166,92 +222,40 @@ public:
       read_stats.count++;
    }
   
-   /**
-    * pop_range - dummy function version of the real one above
-    * sets the input array to whatever "dummy" data has been
-    * passed into the buffer, often real data.  In most cases
-    * this will allow the application to work as it would with
-    * correct inputs even if the overall output will be junk.  This
-    * enables correct measurement of the arrival and service rates.
-    * @param output - std:;array< T, N >*
-    */
-   template< size_t N >
-   void  pop_range( 
-      std::array< T, N > &output, 
-      std::array< RBSignal, N > *signal = nullptr )
+   virtual void local_pop_range( void *ptr_data,
+                                 RBSignal *signal,
+                                 std::size_t n_items )
    {
+      assert( ptr_data != nullptr );
+      auto *items( reinterpret_cast< T* >( ptr_data ) );
+
       if( signal != nullptr )
       {
-         for( size_t i( 0 ); i < N; i++ )
+         for( size_t i( 0 ); i < n_items; i++ )
          {
-            output[ i ]     = data->store [ 0 ].item;
-            (*signal)[ i ]  = data->signal[ 0 ].sig;
+            items [ i ]  = data->store [ 0 ].item;
+            signal[ i ]  = data->signal[ 0 ].sig;
          }
       }
       else
       {
-         for( size_t i( 0 ); i < N; i++ )
+         for( size_t i( 0 ); i < n_items; i++ )
          {
-            output[ i ]    = data->store[ 0 ].item;
+            items [ i ]  = data->store [ 0 ].item;
          }
       }
    }
 
 
-   /**
-    * peek() - look at a reference to the head of the
-    * the ring buffer.  This doesn't remove the item, but it 
-    * does give the user a chance to take a look at it without
-    * removing.
-    * @return T&
-    */
-   T& peek(  RBSignal *signal = nullptr )
+   virtual void local_peek( void **ptr, RBSignal *signal )
    {
-      T &output( data->store[ 0 ].item );
+      *ptr = (void*)&( data->store[ 0 ].item );
       if( signal != nullptr )
       {
          *signal = data->signal[  0  ].sig;
       }
-      return( output );
-   }
-   
-   /**
-    * recycle - remove ``range'' items from the head of the
-    * queue and discard them.  Can be used in conjunction with
-    * the peek operator.
-    * @param   range - const size_t, default = 1
-    */
-   void recycle( const size_t range = 1 )
-   {
-      read_stats.count += range;
    }
 
-   void get_zero_read_stats( Blocked &copy )
-   {
-      copy.all       = read_stats.all;
-      read_stats.all = 0;
-   }
-
-   void get_zero_write_stats( Blocked &copy )
-   {
-      copy.all       = write_stats.all;
-      write_stats.all = 0;
-   }
-
-protected:
-   //TODO, come back to here
-   /**
-    * local_allocate - get a reference to an object of type T at the 
-    * end of the queue.  Should be released to the queue using
-    * the push command once the calling thread is done with the 
-    * memory.
-    * @return T&, reference to memory location at head of queue
-    */
-   T& local_allocate()
-   {
-      (this)->allocate_called = true;
-      return( data->store[ 0 ].item );
-   }
    /** go ahead and allocate a buffer as a heap, doesn't really matter **/
    Buffer::Data< T, RingBufferType::Heap >      *data;
    /** note, these need to get moved into the data struct **/

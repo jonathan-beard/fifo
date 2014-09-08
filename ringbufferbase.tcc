@@ -27,11 +27,6 @@
 #include <cstring>
 #include <iostream>
 #include <cstddef>
-#include <iterator>
-#include <list>
-#include <vector>
-#include <map>
-#include <functional>
 
 #include "Clock.hpp"
 #include "pointer.hpp"
@@ -40,7 +35,7 @@
 #include "signalvars.hpp"
 #include "blocked.hpp"
 #include "fifo.hpp"
-
+#include "fifoabstract.tcc"
 /**
  * Note: there is a NICE define that can be uncommented
  * below if you want sched_yield called when waiting for

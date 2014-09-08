@@ -1,7 +1,7 @@
 /**
- * fifo.cpp - 
+ * fifoabstract.tcc - 
  * @author: Jonathan Beard
- * @version: Thu Sep  4 12:59:45 2014
+ * @version: Sun Sep  7 20:36:12 2014
  * 
  * Copyright 2014 Jonathan Beard
  * 
@@ -17,23 +17,20 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+#ifndef _FIFOABSTRACT_TCC_
+#define _FIFOABSTRACT_TCC_  1
+#include "ringbuffertypes.hpp"
 #include "fifo.hpp"
 
-FIFO::FIFO()
+template < class T, RingBufferType type > class FIFOAbstract : public FIFO
 {
+public:
+   FIFOAbstract() : FIFO()
+   {
+   }
 
-}
+   virtual ~FIFOAbstract() = default;
 
-void
-FIFO::get_zero_read_stats( Blocked &copy )
-{
-   /** default version does nothing at all **/
-   return;
-}
-
-void
-FIFO::get_zero_write_stats( Blocked &copy )
-{
-   /** default version does nothing at all **/
-   return;
-}
+protected:
+};
+#endif /* END _FIFOABSTRACT_TCC_ */

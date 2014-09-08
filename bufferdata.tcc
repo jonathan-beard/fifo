@@ -154,8 +154,7 @@ template < class T,
       std::memset( (this)->signal, 0, ( sizeof( Signal ) * (this)->max_cap ) );
       free( (this)->signal );
    }
-
-};
+}; /** end heap **/
 
 template < class T > struct Data< T, RingBufferType::SharedMemory > : 
    public DataBase< T > 

@@ -21,6 +21,11 @@
 #define _FIFO_HPP_  1
 #include <cstddef>
 #include <typeinfo>
+#include <iterator>
+#include <list>
+#include <vector>
+#include <map>
+#include <functional>
 
 #include "blocked.hpp"
 #include "signalvars.hpp"
@@ -32,7 +37,7 @@ public:
     * FIFO - default constructor for base class for 
     * all subsequent ringbuffers.
     */
-   FIFO() = default;
+   FIFO();
    
    /**
     * ~FIFO - default destructor
@@ -289,7 +294,5 @@ protected:
     */
    virtual void local_peek( void **ptr,
                             RBSignal *signal ) = 0;
-
-
 };
 #endif /* END _FIFO_HPP_ */
