@@ -1,7 +1,7 @@
 RINGBUFFERDIR = ../../simpleringbuffer/ 
 
 RBCFILES   = getrandom 
-RBCXXFILES = pointer shm Clock systeminfo 
+RBCXXFILES = pointer shm Clock procwait resolution fifo 
 
 
 RBCOBJS		= $(addprefix ../../simpleringbuffer/, $(RBCFILES))
