@@ -35,6 +35,7 @@
 #include <iostream>
 #include <fstream>
 #include <utility>
+#include <cstddef>
 
 #include "ringbufferbase.tcc"
 #include "ringbuffertypes.hpp"
@@ -48,7 +49,7 @@ extern Clock *system_clock;
 
 
 template < class T, 
-           RingBufferType type = RingBufferType::Heap, 
+           Type::RingBufferType type = Type::Heap, 
            bool monitor = false >  class RingBuffer : 
                public RingBufferBase< T, type >
 {
@@ -57,9 +58,10 @@ public:
     * RingBuffer - default constructor, initializes basic
     * data structures.
     */
-   RingBuffer( const size_t n ) : RingBufferBase< T, type >()
+   RingBuffer( const std::size_t n, const std::size_t align = 16 ) : 
+      RingBufferBase< T, type >()
    {
-      (this)->data = new Buffer::Data<T, type >( n );
+      (this)->data = new Buffer::Data<T, type >( n, align );
    }
 
    virtual ~RingBuffer()
@@ -67,20 +69,40 @@ public:
       delete( (this)->data );
    }
 
+   /**
+    * make_new_fifo - builder function to dynamically
+    * allocate FIFO's at the time of execution.  The
+    * first two parameters are self explanatory.  The
+    * data ptr is a data struct that is dependent on the
+    * type of FIFO being built.  In there really is no
+    * data necessary so it is expacted to be set to nullptr
+    * @param   n_items - std::size_t
+    * @param   align   - memory alignment
+    * @return  FIFO*
+    */
+   static FIFO* make_new_fifo( std::size_t n_items,
+                               std::size_t align,
+                               void *data )
+   {
+      assert( data == nullptr );
+      return( new RingBuffer< T, Type::Heap, false >( n_items, align ) ); 
+   }
+
 };
 
 template< class T, 
-          RingBufferType type > class RingBufferBaseMonitor : 
+          Type::RingBufferType type > class RingBufferBaseMonitor : 
             public RingBufferBase< T, type >
 {
 public:
-   RingBufferBaseMonitor( const size_t n ) : 
+   RingBufferBaseMonitor( const std::size_t n,
+                          const std::size_t align ) : 
             RingBufferBase< T, type >(),
             monitor( nullptr ),
             term( false )
    {
       (this)->data = new Buffer::Data<T, 
-                                      RingBufferType::Heap >( n );
+                                      Type::Heap >( n, align );
 
       /** add monitor types immediately after construction **/
       sample_master.registerSample( new MeanSampleType< T, type >() );
@@ -120,16 +142,18 @@ protected:
 };
 
 template< class T > class RingBuffer< T, 
-                                      RingBufferType::Heap,
+                                      Type::Heap,
                                       true /* monitor */ > :
-      public RingBufferBaseMonitor< T, RingBufferType::Heap >
+      public RingBufferBaseMonitor< T, Type::Heap >
 {
 public:
    /**
     * RingBuffer - default constructor, initializes basic
     * data structures.
     */
-   RingBuffer( const size_t n ) : RingBufferBaseMonitor< T, RingBufferType::Heap >( n )
+   RingBuffer( const std::size_t n, 
+               const std::size_t align = 16) : 
+                  RingBufferBaseMonitor< T, Type::Heap >( n, align)
    {
       /** nothing really to do **/
    }
@@ -142,16 +166,17 @@ public:
 
 /** specialization for dummy one **/
 template< class T > class RingBuffer< T, 
-                                      RingBufferType::Infinite,
+                                      Type::Infinite,
                                       true /* monitor */ > :
-      public RingBufferBaseMonitor< T, RingBufferType::Infinite >
+      public RingBufferBaseMonitor< T, Type::Infinite >
 {
 public:
    /**
     * RingBuffer - default constructor, initializes basic
     * data structures.
     */
-   RingBuffer( const size_t n ) : RingBufferBaseMonitor< T, RingBufferType::Infinite >( 1 )
+   RingBuffer( const std::size_t n, const std::size_t align = 16 ) : 
+      RingBufferBaseMonitor< T, Type::Infinite >( 1, align )
    {
    }
    virtual ~RingBuffer()
@@ -164,21 +189,21 @@ public:
  * SharedMemory 
  */
 template< class T > class RingBuffer< T, 
-                                      RingBufferType::SharedMemory, 
+                                      Type::SharedMemory, 
                                       false > :
-                            public RingBufferBase< T, RingBufferType::SharedMemory >
+                            public RingBufferBase< T, Type::SharedMemory >
 {
 public:
-   RingBuffer( const size_t      nitems,
+   RingBuffer( const std::size_t      nitems,
                const std::string key,
                Direction         dir,
-               const size_t      alignment = 16 ) : 
-               RingBufferBase< T, RingBufferType::SharedMemory >(),
+               const std::size_t      alignment = 16 ) : 
+               RingBufferBase< T, Type::SharedMemory >(),
                                               shm_key( key )
    {
       (this)->data = 
          new Buffer::Data< T, 
-                           RingBufferType::SharedMemory >( nitems, key, dir, alignment );
+                           Type::SharedMemory >( nitems, key, dir, alignment );
       assert( (this)->data != nullptr );
    }
 
@@ -196,17 +221,17 @@ protected:
  * TCP w/ multiplexing
  */
 template <class T> class RingBuffer< T,
-                                     RingBufferType::TCP,
+                                     Type::TCP,
                                      false /* no monitoring yet */ > :
-                                       public RingBufferBase< T, RingBufferType::Heap >
+                                       public RingBufferBase< T, Type::Heap >
 {
 public:
-   RingBuffer( const size_t      nitems,
+   RingBuffer( const std::size_t      nitems,
                const std::string dns_name,
                Direction         dir,
-               const size_t      alignment = 16 ) : 
+               const std::size_t      alignment = 16 ) : 
                   RingBufferBase< T, 
-                                  RingBufferType::Heap >()
+                                  Type::Heap >()
    {
       //TODO, fill in stuff here
    }
@@ -214,6 +239,25 @@ public:
    virtual ~RingBuffer()
    {
 
+   }
+   
+   struct Data
+   {
+      Direction   dir;
+      std::string dns_name;
+   };
+
+   static FIFO* make_new_fifo( const std::size_t n,
+                               const std::size_t align,
+                               void *data )
+   {
+      auto *cast_data( 
+         reinterpret_cast< RingBuffer< T, Type::TCP, false >::Data* >( data ) );
+
+      return( new RingBuffer< T, Type::TCP, false >(n /** n_items **/,
+                                                    cast_data->dns_name,
+                                                    cast_data->dir,
+                                                    align ) );
    }
 
 protected:

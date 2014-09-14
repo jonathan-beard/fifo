@@ -21,7 +21,7 @@
 #define _RINGBUFFERHEAP_TCC_  1
 
 template < class T, 
-           RingBufferType type > class RingBufferBase : 
+           Type::RingBufferType type > class RingBufferBase : 
             public FIFOAbstract< T, type > {
 public:
    /**

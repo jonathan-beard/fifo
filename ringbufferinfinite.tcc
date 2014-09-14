@@ -20,15 +20,15 @@
 #ifndef _RINGBUFFERINFINITE_TCC_
 #define _RINGBUFFERINFINITE_TCC_  1
 
-template < class T > class RingBufferBase< T, RingBufferType::Infinite > : 
-   public FIFOAbstract< T, RingBufferType::Infinite >
+template < class T > class RingBufferBase< T, Type::Infinite > : 
+   public FIFOAbstract< T, Type::Infinite >
 {
 public:
    /**
     * RingBuffer - default constructor, initializes basic
     * data structures.
     */
-   RingBufferBase() : FIFOAbstract< T, RingBufferType::Infinite >(),
+   RingBufferBase() : FIFOAbstract< T, Type::Infinite >(),
                       data( nullptr ),
                       allocate_called( false ),
                       write_finished( false )
@@ -257,7 +257,7 @@ protected:
    }
 
    /** go ahead and allocate a buffer as a heap, doesn't really matter **/
-   Buffer::Data< T, RingBufferType::Heap >      *data;
+   Buffer::Data< T, Type::Heap >      *data;
    /** note, these need to get moved into the data struct **/
    volatile Blocked                             read_stats;
    volatile Blocked                             write_stats;

@@ -22,7 +22,8 @@
 #include "ringbuffertypes.hpp"
 #include "fifo.hpp"
 
-template < class T, RingBufferType type > class FIFOAbstract : public FIFO
+template < class T, Type::RingBufferType type > 
+   class FIFOAbstract : public FIFO
 {
 public:
    FIFOAbstract() : FIFO()

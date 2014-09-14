@@ -230,6 +230,7 @@ public:
     * @param   write_finished - bool&
     */
    virtual void get_write_finished( bool &write_finished ) = 0;
+
 protected:
    /** 
     * local_allocate - in order to get this whole thing

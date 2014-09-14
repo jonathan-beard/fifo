@@ -27,7 +27,7 @@
 typedef std::int64_t _v2di __attribute__((vector_size (16)));
 #endif 
 
-template < class T, RingBufferType type > class RateSampleType : 
+template < class T, Type::RingBufferType type > class RateSampleType : 
    public SampleType< T, type >
 {
 public:

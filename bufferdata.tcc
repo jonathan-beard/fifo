@@ -28,6 +28,7 @@
 #include "pointer.hpp"
 #include "ringbuffertypes.hpp"
 
+
 namespace Buffer
 {
 
@@ -110,7 +111,7 @@ template < class T > struct DataBase
 };
 
 template < class T, 
-           RingBufferType B = RingBufferType::Heap, 
+           Type::RingBufferType B = Type::Heap, 
            size_t SIZE = 0 > struct Data : public DataBase< T >
 {
 
@@ -156,7 +157,7 @@ template < class T,
    }
 }; /** end heap **/
 
-template < class T > struct Data< T, RingBufferType::SharedMemory > : 
+template < class T > struct Data< T, Type::SharedMemory > : 
    public DataBase< T > 
 {
    /**

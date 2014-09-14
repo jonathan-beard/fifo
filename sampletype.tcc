@@ -29,7 +29,7 @@
 
 #include "units.hpp"
 
-template < class T, RingBufferType type > class SampleType
+template < class T, Type::RingBufferType type > class SampleType
 {
 public:
 

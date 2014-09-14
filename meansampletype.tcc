@@ -23,7 +23,8 @@
 
 #include "ringbuffertypes.hpp"
 #include "sampletype.tcc"
-template< class T, RingBufferType type > class MeanSampleType : public SampleType< T, type >
+template< class T, Type::RingBufferType type > 
+   class MeanSampleType : public SampleType< T, type >
 {
 public:
 MeanSampleType() : SampleType< T, type >()

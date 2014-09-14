@@ -31,7 +31,7 @@
 
 extern Clock *system_clock;
 
-template < class T, RingBufferType type > class ArrivalRateSampleType : 
+template < class T, Type::RingBufferType type > class ArrivalRateSampleType : 
    public RateSampleType< T, type >
 {
 public:
