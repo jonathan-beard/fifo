@@ -162,6 +162,14 @@ public:
    {
       /** nothing really to do **/
    }
+   
+   static FIFO* make_new_fifo( std::size_t n_items,
+                               std::size_t align,
+                               void *data )
+   {
+      assert( data == nullptr );
+      return( new RingBuffer< T, Type::Heap, true >( n_items, align ) ); 
+   }
 };
 
 /** specialization for dummy one **/
@@ -183,7 +191,59 @@ public:
    {
       /** nothing really to do **/
    }
+
+   static FIFO* make_new_fifo( std::size_t n_items,
+                               std::size_t align,
+                               void *data )
+   {
+      assert( data == nullptr );
+      return( new RingBuffer< T, Type::Infinite, true >( n_items, align ) ); 
+   }
 };
+
+/** specialization for dummy with no instrumentation **/
+template < class T > class RingBuffer < T,
+                                        Type::Infinite,
+                                        false > : 
+               public RingBufferBase< T, Type::Infinite >
+{
+public:
+   /**
+    * RingBuffer - default constructor, initializes basic
+    * data structures.
+    */
+   RingBuffer( const std::size_t n, const std::size_t align = 16 ) : 
+      RingBufferBase< T, type >()
+   {
+      (this)->data = new Buffer::Data<T, type >( 1, 16 );
+   }
+
+   virtual ~RingBuffer()
+   {
+      delete( (this)->data );
+   }
+
+   /**
+    * make_new_fifo - builder function to dynamically
+    * allocate FIFO's at the time of execution.  The
+    * first two parameters are self explanatory.  The
+    * data ptr is a data struct that is dependent on the
+    * type of FIFO being built.  In there really is no
+    * data necessary so it is expacted to be set to nullptr
+    * @param   n_items - std::size_t
+    * @param   align   - memory alignment
+    * @return  FIFO*
+    */
+   static FIFO* make_new_fifo( std::size_t n_items,
+                               std::size_t align,
+                               void *data )
+   {
+      assert( data == nullptr );
+      return( new RingBuffer< T, Type::Infinite, false >( n_items, align ) ); 
+   }
+
+};
+
 
 /** 
  * SharedMemory 
@@ -210,6 +270,34 @@ public:
    virtual ~RingBuffer()
    {
       delete( (this)->data );      
+   }
+  
+   struct Data
+   {
+      const std::string key;
+      Direction   dir;
+   };
+
+   /**
+    * make_new_fifo - builder function to dynamically
+    * allocate FIFO's at the time of execution.  The
+    * first two parameters are self explanatory.  The
+    * data ptr is a data struct that is dependent on the
+    * type of FIFO being built.  In there really is no
+    * data necessary so it is expacted to be set to nullptr
+    * @param   n_items - std::size_t
+    * @param   align   - memory alignment
+    * @return  FIFO*
+    */
+   static FIFO* make_new_fifo( std::size_t n_items,
+                               std::size_t align,
+                               void *data )
+   {
+      auto *data_ptr( reinterpret_cast< Data* >( data ) );
+      return( new RingBuffer< T, Type::SHM, false >( n_items, 
+                                                     data_ptr->key,
+                                                     data_ptr->dir,
+                                                     align ) ); 
    }
 
 protected:
