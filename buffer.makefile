@@ -1,8 +1,8 @@
-RINGBUFFERDIR = ../../simpleringbuffer/ 
+RINGBUFFERDIR = ./fifo/ 
 
 RBCFILES   = getrandom 
 RBCXXFILES = pointer shm Clock procwait resolution fifo 
 
 
-RBCOBJS		= $(addprefix ../../simpleringbuffer/, $(RBCFILES))
-RBCXXOBJS	= $(addprefix ../../simpleringbuffer/, $(RBCXXFILES))
+RBCOBJS		= $(addprefix ./fifo/, $(RBCFILES))
+RBCXXOBJS	= $(addprefix ./fifo/, $(RBCXXFILES))
