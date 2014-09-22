@@ -2,8 +2,8 @@ CC    ?= gcc
 CXX   ?= g++
 
 
-CFLAGS   =  -O2 -g  -Wall -std=c99
-CXXFLAGS =  -O2 -g  -Wall -std=c++11  -DRDTSCP=1 -DLIMITRATE=1
+CFLAGS   =  -O3 -g  -Wall -std=c99
+CXXFLAGS =  -O3 -g  -Wall -std=c++11  -DRDTSCP=1 -DLIMITRATE=1
 
 COBJS = getrandom
 CXXOBJS = main pointer shm Clock procwait resolution fifo
