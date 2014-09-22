@@ -213,9 +213,9 @@ public:
     * data structures.
     */
    RingBuffer( const std::size_t n, const std::size_t align = 16 ) : 
-      RingBufferBase< T, type >()
+      RingBufferBase< T, Type::Infinite >()
    {
-      (this)->data = new Buffer::Data<T, type >( 1, 16 );
+      (this)->data = new Buffer::Data<T, Type::Heap >( 1, 16 );
    }
 
    virtual ~RingBuffer()
@@ -294,10 +294,10 @@ public:
                                void *data )
    {
       auto *data_ptr( reinterpret_cast< Data* >( data ) );
-      return( new RingBuffer< T, Type::SHM, false >( n_items, 
-                                                     data_ptr->key,
-                                                     data_ptr->dir,
-                                                     align ) ); 
+      return( new RingBuffer< T, Type::SharedMemory, false >( n_items, 
+                                                              data_ptr->key,
+                                                              data_ptr->dir,
+                                                              align ) ); 
    }
 
 protected:
