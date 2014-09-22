@@ -22,6 +22,8 @@
 
 #include <functional>
 #include <vector>
+#include <sstream>
+
 #include "ringbuffertypes.hpp"
 #include "ringbufferbase.tcc"
 #include "sampletype.tcc"
