@@ -396,6 +396,7 @@ protected:
    virtual void 
    local_pop( void *ptr, RBSignal *signal )
    {
+      assert( ptr != nullptr );
       while( size() == 0 )
       {
 #ifdef NICE      
