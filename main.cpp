@@ -25,6 +25,8 @@ struct Data
    Data( std::int64_t send ) : send_count(  send )
    {}
    std::int64_t          send_count;
+   double                arrival_process;
+   double                departure_process;
 } data( MAX_VAL );
 
 
@@ -66,10 +68,10 @@ producer( Data &data, TheBuffer &buffer )
 }
 
 void 
-consumer( TheBuffer &buffer )
+consumer( Data &data, TheBuffer &buffer )
 {
    std::int64_t   current_count( 0 );
-   const float serviceTime( 3.0e-6 );
+   const float serviceTime( 5.0e-6 );
    RBSignal signal( RBSignal::NONE );
    while( signal != RBSignal::RBEOF )
    {
@@ -134,6 +136,7 @@ std::string test()
                   std::ref( buffer ) );
 
    std::thread b( consumer, 
+                  std::ref( data ),
                   std::ref( buffer ) );
    a.join();
    b.join();
@@ -151,6 +154,9 @@ std::string test()
 int 
 main( int argc, char **argv )
 {
+   //data.arrival_process   = (std::stof( argv[ 1 ] ) );
+   //data.departure_process = (std::stof( argv[ 2 ] ) );
+   
    system_clock = new SystemClock< System >( 1 );
    //RandomString< 50 > rs;
    //const std::string root( "/project/mercury/svardata/" );
