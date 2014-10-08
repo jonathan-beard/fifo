@@ -141,6 +141,11 @@ public:
       write_stats.all = 0;
    }
 
+   virtual void get_write_finished( bool &write_finished )
+   {
+      write_finished = (this)->write_finished;
+   }
+
 protected:
    
    virtual void  local_allocate( void **ptr )
@@ -149,7 +154,7 @@ protected:
       *ptr = (void*)&(data->store[ 0 ].item);
    }
    
-   virtual void  local_push( void *ptr, const RBSignal signal )
+   virtual void  local_push( void *ptr, const RBSignal &signal )
    {
       T *item (reinterpret_cast< T* >( ptr ) );
       data->store [ 0 ].item  = *item;
@@ -199,8 +204,8 @@ protected:
                            local_insert_helper( *begin, *end, signal );
 
                        } } };
-      auto f( (this)->func_map.find( iterator_type ) );
-      if( f != (this)->func_map.end() )
+      auto f( func_map.find( iterator_type ) );
+      if( f != func_map.end() )
       {
          (*f).second( begin_ptr, end_ptr, signal );
       }

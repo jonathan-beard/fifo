@@ -15,18 +15,42 @@
 #include "ringbuffer.tcc"
 #include "randomstring.tcc"
 #include "signalvars.hpp"
+#include <gsl/gsl_randist.h>
+#include <gsl/gsl_rng.h>
 
-#define MAX_VAL 1000000000
+#define MAX_VAL 100000
+#define EXP 1
 
 Clock *system_clock;
 
 struct Data
 {
    Data( std::int64_t send ) : send_count(  send )
-   {}
+   {
+      gsl_rng_env_setup();
+   }
+
+   void setArrival( double mu )
+   {
+      r_arrival = gsl_rng_alloc( type );
+      gsl_rng_set( r_arrival, 100 );
+      arrival_process = mu;
+   }
+
+   void setDeparture( double mu )
+   {
+      r_departure = gsl_rng_alloc( type );
+      gsl_rng_set( r_departure, 100 );
+      departure_process = mu;
+   }
+
+   
    std::int64_t          send_count;
    double                arrival_process;
    double                departure_process;
+   gsl_rng               *r_arrival;
+   gsl_rng               *r_departure;
+   const gsl_rng_type    *type = gsl_rng_default;
 } data( MAX_VAL );
 
 
@@ -40,7 +64,7 @@ typedef RingBuffer< std::int64_t,
                     false > TheBuffer;
 #elif defined USELOCAL
 typedef RingBuffer< std::int64_t          /* buffer type */,
-                    Type::Heap  /* allocation type */,
+                    Type::Heap        /* allocation type */,
                     true                  /* turn on monitoring */ >  TheBuffer;
 #endif
 
@@ -51,7 +75,6 @@ void
 producer( Data &data, TheBuffer &buffer )
 {
    std::int64_t current_count( 0 );
-   const float serviceTime( 10.0e-6 );
    while( current_count++ < data.send_count )
    {
       auto &ref( buffer.allocate< std::int64_t >() );
@@ -60,7 +83,13 @@ producer( Data &data, TheBuffer &buffer )
          (current_count == data.send_count ? 
           RBSignal::RBEOF : RBSignal::NONE ) );
 #if LIMITRATE
+#if EXP == 1
+      const auto endTime( gsl_ran_exponential( data.r_arrival, 
+                                               data.arrival_process )  + 
+                           system_clock->getTime() );
+#else
       const auto endTime( serviceTime + system_clock->getTime() );
+#endif
       while( endTime > system_clock->getTime() );
 #endif
    }
@@ -71,14 +100,19 @@ void
 consumer( Data &data, TheBuffer &buffer )
 {
    std::int64_t   current_count( 0 );
-   const float serviceTime( 5.0e-6 );
    RBSignal signal( RBSignal::NONE );
    while( signal != RBSignal::RBEOF )
    {
       buffer.pop( current_count, &signal );
 #if LIMITRATE
+#if EXP == 1
+      const auto endTime( gsl_ran_exponential( data.r_departure, 
+                                               data.departure_process )  + 
+                           system_clock->getTime() );
+#else
       const auto endTime( serviceTime + system_clock->getTime() );
-      while( endTime > system_clock->getTime() );
+#endif
+   while( endTime > system_clock->getTime() );
 #endif
    }
    assert( current_count == MAX_VAL );
@@ -158,6 +192,8 @@ main( int argc, char **argv )
    //data.departure_process = (std::stof( argv[ 2 ] ) );
    
    system_clock = new SystemClock< System >( 1 );
+   data.setDeparture( 1.0e-6 );
+   data.setArrival( 10.0e-6 );
    //RandomString< 50 > rs;
    //const std::string root( "/project/mercury/svardata/" );
    //const std::string root( "" );
