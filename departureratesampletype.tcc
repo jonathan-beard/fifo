@@ -26,6 +26,7 @@
 #include <cinttypes>
 #include "Clock.hpp"
 #include <array>
+#include <iomanip>
 
 extern Clock *system_clock;
 
@@ -76,7 +77,8 @@ protected:
 virtual std::string
 printHeader()
 {
-   std::cerr << "{" << (this)->frame_width << ",{"; 
+   std::cerr.setf( std::ios::fixed );
+   std::cerr << "{" << std::setprecision( 30 ) << ( this)->frame_width << ",{"; 
    for( auto i( 0 ); i < item_index; i++ )
    {
       if( i != (item_index - 1) )

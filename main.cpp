@@ -188,12 +188,12 @@ std::string test()
 int 
 main( int argc, char **argv )
 {
-   //data.arrival_process   = (std::stof( argv[ 1 ] ) );
-   //data.departure_process = (std::stof( argv[ 2 ] ) );
+   data.arrival_process   = (std::stof( argv[ 1 ] ) );
+   data.departure_process = (std::stof( argv[ 2 ] ) );
    
    system_clock = new SystemClock< System >( 1 );
-   data.setDeparture( 1.0e-6 );
-   data.setArrival( 10.0e-6 );
+   data.setArrival( std::stof( argv[ 1 ] ));
+   data.setDeparture( std::stof( argv[ 2 ] ) );
    //RandomString< 50 > rs;
    //const std::string root( "/project/mercury/svardata/" );
    //const std::string root( "" );

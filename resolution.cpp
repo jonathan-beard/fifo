@@ -70,7 +70,8 @@ frame_resolution::updateResolution(  frame_resolution &frame,
    {
       if( frame.frame_failure++ > 1 )
       {
-         frame.curr_frame_width += system_clock->getResolution();
+         //frame.curr_frame_width += system_clock->getResolution();
+         frame.curr_frame_width *= 2;
          frame.frame_failure = 0;
          frame.frame_success = 0;
          frame.blocked_count = 0;
