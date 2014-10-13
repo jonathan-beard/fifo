@@ -30,7 +30,7 @@
 #endif
 
 #ifndef CONVERGENCE
-#define CONVERGENCE .0005
+#define CONVERGENCE .005
 #endif
 
 extern Clock *system_clock;
