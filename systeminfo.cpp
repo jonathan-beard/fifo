@@ -51,6 +51,7 @@
 #endif
 
 #include "systeminfo.hpp"
+using namespace si;
 
 std::string
 SystemInfo::getSystemProperty( const Trait trait )
