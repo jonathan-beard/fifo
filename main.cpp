@@ -18,7 +18,6 @@
 #include <gsl/gsl_randist.h>
 #include <gsl/gsl_rng.h>
 
-#define MAX_VAL 100000
 #define EXP 1
 
 Clock *system_clock;
@@ -51,7 +50,7 @@ struct Data
    gsl_rng               *r_arrival;
    gsl_rng               *r_departure;
    const gsl_rng_type    *type = gsl_rng_default;
-} data( MAX_VAL );
+};
 
 
 //#define USESharedMemory 1
@@ -115,11 +114,11 @@ consumer( Data &data, TheBuffer &buffer )
    while( endTime > system_clock->getTime() );
 #endif
    }
-   assert( current_count == MAX_VAL );
+   assert( current_count == data.send_count );
    return;
 }
 
-std::string test()
+std::string test( Data &data )
 {
 #ifdef USESharedMemory
    char shmkey[ 256 ];
@@ -188,6 +187,7 @@ std::string test()
 int 
 main( int argc, char **argv )
 {
+   Data data( atoi( argv[ 3 ] ) );
    data.arrival_process   = (std::stof( argv[ 1 ] ) );
    data.departure_process = (std::stof( argv[ 2 ] ) );
    
@@ -206,7 +206,7 @@ main( int argc, char **argv )
    int runs( 1 );
    while( runs-- )
    {
-       std::cout << test() << "\n";
+       std::cout << test( data ) << "\n";
    }
    //ofs.close();
    if( system_clock != nullptr ) 
