@@ -41,18 +41,17 @@ virtual void
 sample( RingBufferBase< T, type > &buffer,
         bool                      &global_blocked )
 {
+   (this)->temp.occupancy        = 0;
    (this)->temp.occupancy    += buffer.size();
 }
 
 virtual void
 accept( volatile bool &converged )
 {
-   if( converged )
+   //if( converged )
    {
       (this)->real += (this)->temp;
    }
-   /** TODO, change this if I change the struct to a union **/
-   (this)->temp.occupancy        = 0;
 }
 
 protected:

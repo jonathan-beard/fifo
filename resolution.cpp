@@ -78,11 +78,11 @@ frame_resolution::updateResolution(  frame_resolution &frame,
       }
       return( false );
    };
-   if( p_diff < ( -CONVERGENCE )  /**||  frame.blocked_count < 2 **/ )
+   if( p_diff < ( -CONVERGENCE )   /**||  frame.blocked_count < 2**/ )
    {
       update();
    }
-   else if ( p_diff > CONVERGENCE  /** || frame.blocked_count < 2 **/ )
+   else if ( p_diff > CONVERGENCE  /**|| frame.blocked_count < 2 **/ )
    {
       update(); 
    }
