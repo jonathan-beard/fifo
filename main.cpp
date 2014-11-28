@@ -19,7 +19,7 @@
 #include <gsl/gsl_rng.h>
 
 #define EXP 1
-
+#define LIMITRATE 1
 Clock *system_clock;
 
 struct Data
@@ -55,7 +55,7 @@ struct Data
 
 //#define USESharedMemory 1
 #define USELOCAL 1
-#define BUFFSIZE 100
+#define BUFFSIZE 1000000
 
 #ifdef USESharedMemory
 typedef RingBuffer< std::int64_t, 

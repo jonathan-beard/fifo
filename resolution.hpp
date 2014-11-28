@@ -30,7 +30,7 @@
 #endif
 
 #ifndef CONVERGENCE
-#define CONVERGENCE .05
+#define CONVERGENCE .005
 #endif
 
 extern Clock *system_clock;
@@ -99,9 +99,9 @@ private:
       double upper;
       double lower;
    }range;
-   std::uint16_t     frame_success;
-   std::uint16_t     frame_failure;
-   std::uint16_t     blocked_count;
-   std::uint16_t     frame_count;
+   std::uint64_t     frame_success;
+   std::uint64_t     frame_failure;
+   std::uint64_t     blocked_count;
+   std::uint64_t     frame_count;
 };
 #endif /* END _RESOLUTION_HPP_ */
