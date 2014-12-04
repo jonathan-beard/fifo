@@ -189,7 +189,7 @@ public:
    {
       void *ptr( nullptr );
       local_peek( &ptr, signal );
-      return;
+      return( *(reinterpret_cast< T* >(ptr)) );
    }
 
 

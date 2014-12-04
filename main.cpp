@@ -19,7 +19,7 @@
 #include <gsl/gsl_rng.h>
 
 #define EXP 1
-#define LIMITRATE 1
+//#define LIMITRATE 1
 Clock *system_clock;
 
 struct Data
@@ -55,7 +55,7 @@ struct Data
 
 //#define USESharedMemory 1
 #define USELOCAL 1
-#define BUFFSIZE 1000000
+#define BUFFSIZE 64
 
 #ifdef USESharedMemory
 typedef RingBuffer< std::int64_t, 
@@ -103,6 +103,7 @@ consumer( Data &data, TheBuffer &buffer )
    while( signal != RBSignal::RBEOF )
    {
       buffer.pop( current_count, &signal );
+      fprintf( stdout, "%" PRIi64 "\n", current_count );
 #if LIMITRATE
 #if EXP == 1
       const auto endTime( gsl_ran_exponential( data.r_departure, 
