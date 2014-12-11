@@ -47,6 +47,7 @@ public:
     */
    virtual std::size_t   size()
    {
+TOP:
       const auto   wrap_write( Pointer::wrapIndicator( data->write_pt  ) ),
                    wrap_read(  Pointer::wrapIndicator( data->read_pt   ) );
 
@@ -63,11 +64,14 @@ public:
             /**
              * TODO, this condition is momentary, however there
              * is a better way to fix this with atomic operations...
-             * or on second thought benchmarking shows the atomic
+             * its caused by the incorrect value of either wpt or rpt
+             * being read within the cache. Benchmarking shows the atomic
              * operations slows the queue down drastically so, perhaps
-             * this is in fact the best of all possible returns.
+             * this is the best that can be done with this type of a 
+             * queue implementation.  Perhaps a more classic implementation
+             * might work better for this application?
              */
-            return( data->max_cap  );
+            goto TOP;
          }
          else
          {
