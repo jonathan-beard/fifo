@@ -63,7 +63,11 @@ typedef RingBuffer< std::int64_t,
                     false > TheBuffer;
 #elif defined USELOCAL
 typedef RingBuffer< std::int64_t          /* buffer type */,
-                    Type::Heap        /* allocation type */,
+                    Type::Heap            /* allocation type */,
+                    false                 /* turn on monitoring */ >  TheBuffer;
+#elif defined USELOCAL && defined MONITOR
+typedef RingBuffer< std::int64_t          /* buffer type */,
+                    Type::Heap            /* allocation type */,
                     true                  /* turn on monitoring */ >  TheBuffer;
 #endif
 
@@ -177,10 +181,12 @@ std::string test( Data &data )
 #endif
 #if USESharedMemory   
    return( "done" );
-#else
+#elif defined MONITOR
    std::stringstream ss;
    buffer.printQueueData( ss );
    return( ss.str() );
+#else
+   return( "" );
 #endif
 }
 
@@ -188,6 +194,13 @@ std::string test( Data &data )
 int 
 main( int argc, char **argv )
 {
+   if( argc != 4 )
+   {
+      std::cerr << "usage: " <<
+         "<service time arrival> <service time departure> <items to send>\n";
+      exit( EXIT_FAILURE );
+   }
+   
    Data data( atoi( argv[ 3 ] ) );
    data.arrival_process   = (std::stof( argv[ 1 ] ) );
    data.departure_process = (std::stof( argv[ 2 ] ) );
@@ -196,7 +209,6 @@ main( int argc, char **argv )
    data.setArrival( std::stof( argv[ 1 ] ));
    data.setDeparture( std::stof( argv[ 2 ] ) );
    //RandomString< 50 > rs;
-   //const std::string root( "/project/mercury/svardata/" );
    //const std::string root( "" );
    //std::ofstream ofs( root + rs.get() + ".csv" );
    //if( ! ofs.is_open() )
@@ -210,7 +222,9 @@ main( int argc, char **argv )
        std::cout << test( data ) << "\n";
    }
    //ofs.close();
-   if( system_clock != nullptr ) 
+   if( system_clock != nullptr )
+   {
       delete( system_clock );
+   }
 }
 
