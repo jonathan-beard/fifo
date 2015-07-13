@@ -55,20 +55,21 @@ struct Data
 
 //#define USESharedMemory 1
 #define USELOCAL 1
+#define MONITOR  1
 #define BUFFSIZE 64
 
 #ifdef USESharedMemory
 typedef RingBuffer< std::int64_t, 
                     Type::SharedMemory, 
                     false > TheBuffer;
-#elif defined USELOCAL
-typedef RingBuffer< std::int64_t          /* buffer type */,
-                    Type::Heap            /* allocation type */,
-                    false                 /* turn on monitoring */ >  TheBuffer;
 #elif defined USELOCAL && defined MONITOR
 typedef RingBuffer< std::int64_t          /* buffer type */,
                     Type::Heap            /* allocation type */,
                     true                  /* turn on monitoring */ >  TheBuffer;
+#elif defined USELOCAL
+typedef RingBuffer< std::int64_t          /* buffer type */,
+                    Type::Heap            /* allocation type */,
+                    false                 /* turn on monitoring */ >  TheBuffer;
 #endif
 
 
@@ -107,7 +108,6 @@ consumer( Data &data, TheBuffer &buffer )
    while( signal != RBSignal::RBEOF )
    {
       buffer.pop( current_count, &signal );
-      fprintf( stdout, "%" PRIi64 "\n", current_count );
 #if LIMITRATE
 #if EXP == 1
       const auto endTime( gsl_ran_exponential( data.r_departure, 

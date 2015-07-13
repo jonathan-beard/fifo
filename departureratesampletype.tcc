@@ -64,7 +64,7 @@ accept( volatile bool &converged )
    if( converged &&  ! (this)->blocked && ! (this)->finished )
    {
       (this)->real += (this)->temp;
-      if( item_index < 100000 )
+      if( item_index < 100000000  )
       {
          item_log[ item_index++ ] = (this)->temp.items_copied;
       }
@@ -97,7 +97,7 @@ printHeader()
 private:
 bool  blocked;
 bool  finished;
-std::array< std::int64_t, 100000 > item_log;
+std::array< std::uint16_t, 100000000 > item_log;
 std::int64_t item_index = 0;
 };
 #endif /* END _DEPARTURERATESAMPLETYPE_TCC_ */
