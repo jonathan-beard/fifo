@@ -1,4 +1,4 @@
-simpleringbuffer
+fifo
 ================
 
 A simple ringbuffer template implementation in C++ that
