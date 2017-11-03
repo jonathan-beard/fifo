@@ -5,8 +5,7 @@ CXX   ?= g++
 CFLAGS   =  -O2 -g -Wall -std=c99
 CXXFLAGS =  -O2 -g  -Wall -std=c++11  -DRDTSCP=1 #-DLIMITRATE=1
 
-COBJS = getrandom
-CXXOBJS = main pointer shm procwait fifo
+CXXOBJS = main pointer fifo
 
 CFILES = $(addsuffix .c, $(COBJS) )
 CXXFILES = $(addsuffix .cpp, $(CXXOBJS) )
@@ -19,7 +18,7 @@ STATIC = -static -static-libgcc -static-libstdc++
 endif
 
 INCS = 
-LIBS = -lpthread -lgsl -lgslcblas -lm -lc $(RT) $(STATIC) 
+LIBS = -lpthread -lm -lc $(RT) $(STATIC) 
 
 compile: $(CXXFILES) $(CFILES)
 	$(MAKE) $(OBJS)
