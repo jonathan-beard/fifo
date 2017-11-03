@@ -20,7 +20,11 @@ The size of each FIFO is static. It is also lock free.
 # Example
 
 ```cpp
-
+#include "fifo.hpp"
+#include <cstdint>
+#include <cstdlib>
+#include <iostream>
+#include <thread>
 
 using ringb_t =  RingBuffer< std::int64_t          /* buffer type */,
                              Type::Heap            /* allocation type */
@@ -45,17 +49,22 @@ static void func_b( ringb_t &buffer, bool &term )
   }
   return;
 }
-ringb_t buffer( 100 /** size **/ );
 
-bool term( false );
+int main()
+{
+  ringb_t buffer( 100 /** size **/ );
 
-std::thread a( func_a, std::ref( buffer ), std::ref( term ) );
-std::thread b( func_b, std::ref( buffer ), std::ref( term ) );
+  bool term( false );
 
-term = true;
+  std::thread a( func_a, std::ref( buffer ), std::ref( term ) );
+  std::thread b( func_b, std::ref( buffer ), std::ref( term ) );
 
-a.join();
-b.join();
+  term = true;
+
+  a.join();
+  b.join();
+  return( EXIT_SUCCESS );
+}
 
 ```
 
