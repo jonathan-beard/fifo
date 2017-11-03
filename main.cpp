@@ -9,8 +9,6 @@
 #include <fstream>
 #include <cassert>
 #include <cinttypes>
-#include "Clock.hpp"
-#include "SystemClock.tcc"
 #include "procwait.hpp"
 #include "ringbuffer.tcc"
 #include "randomstring.tcc"
@@ -18,9 +16,6 @@
 #include <gsl/gsl_randist.h>
 #include <gsl/gsl_rng.h>
 
-#define EXP 1
-//#define LIMITRATE 1
-Clock *system_clock;
 
 struct Data
 {
@@ -55,21 +50,16 @@ struct Data
 
 //#define USESharedMemory 1
 #define USELOCAL 1
-#define MONITOR  1
 #define BUFFSIZE 64
 
 #ifdef USESharedMemory
 typedef RingBuffer< std::int64_t, 
-                    Type::SharedMemory, 
-                    false > TheBuffer;
-#elif defined USELOCAL && defined MONITOR
-typedef RingBuffer< std::int64_t          /* buffer type */,
-                    Type::Heap            /* allocation type */,
-                    true                  /* turn on monitoring */ >  TheBuffer;
+                    Type::SharedMemory 
+                    > TheBuffer;
 #elif defined USELOCAL
 typedef RingBuffer< std::int64_t          /* buffer type */,
-                    Type::Heap            /* allocation type */,
-                    false                 /* turn on monitoring */ >  TheBuffer;
+                    Type::Heap            /* allocation type */
+                    >  TheBuffer;
 #endif
 
 
@@ -108,6 +98,7 @@ consumer( Data &data, TheBuffer &buffer )
    while( signal != RBSignal::RBEOF )
    {
       buffer.pop( current_count, &signal );
+      std::cout << current_count << "\n";
 #if LIMITRATE
 #if EXP == 1
       const auto endTime( gsl_ran_exponential( data.r_departure, 
@@ -179,15 +170,7 @@ std::string test( Data &data )
    a.join();
    b.join();
 #endif
-#if USESharedMemory   
    return( "done" );
-#elif defined MONITOR
-   std::stringstream ss;
-   buffer.printQueueData( ss );
-   return( ss.str() );
-#else
-   return( "" );
-#endif
 }
 
 
@@ -205,7 +188,6 @@ main( int argc, char **argv )
    data.arrival_process   = (std::stof( argv[ 1 ] ) );
    data.departure_process = (std::stof( argv[ 2 ] ) );
    
-   system_clock = new SystemClock< System >( 1 );
    data.setArrival( std::stof( argv[ 1 ] ));
    data.setDeparture( std::stof( argv[ 2 ] ) );
    //RandomString< 50 > rs;
@@ -220,11 +202,6 @@ main( int argc, char **argv )
    while( runs-- )
    {
        std::cout << test( data ) << "\n";
-   }
-   //ofs.close();
-   if( system_clock != nullptr )
-   {
-      delete( system_clock );
    }
 }
 
